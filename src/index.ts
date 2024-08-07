@@ -1,6 +1,11 @@
 import express from "express";
 import OpenAI from "openai";
-import { ModelRunner, RunnerResponse } from "./model-runner";
+import {
+  listModels,
+  describeModel,
+  executeModel,
+  type RunnerResponse,
+} from "./functions";
 import { verifySignatureMiddleware } from "./validate-signature";
 
 const app = express();
@@ -84,7 +89,6 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
     return;
   }
 
-  const modelRunner = new ModelRunner();
   const functionToCall = toolCaller.choices[0].message.tool_calls[0].function;
   const args = JSON.parse(functionToCall.arguments);
 
@@ -92,15 +96,15 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
   let functionCallRes: RunnerResponse;
   switch (functionToCall.name) {
     case "list_models":
-      functionCallRes = await modelRunner.listModels();
+      functionCallRes = await listModels();
       break;
     case "describe_model":
-      functionCallRes = await modelRunner.describeModel({
+      functionCallRes = await describeModel({
         modelName: args.modelName,
       });
       break;
     case "execute_model":
-      functionCallRes = await modelRunner.executeModel({
+      functionCallRes = await executeModel({
         modelName: args.modelName,
         instruction: args.instruction,
       });
