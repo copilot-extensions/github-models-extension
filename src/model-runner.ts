@@ -23,12 +23,7 @@ export interface RunnerResponse {
 }
 
 export class ModelRunner {
-  client: OpenAI;
   defaultModel = "gpt-4o-mini";
-
-  constructor(client: OpenAI) {
-    this.client = client;
-  }
 
   async listModels(): Promise<RunnerResponse> {
     const modelsRes = await fetch(

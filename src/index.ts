@@ -13,16 +13,16 @@ app.post("/", express.json(), async (req, res) => {
 
   // Create a new GitHub Models API client
   const apiKey = req.get("X-GitHub-Token");
-  const ghModelsClient = new OpenAI({
-    baseURL: "https://models.inference.ai.azure.com",
-    apiKey,
-  });
-  const modelRunner = new ModelRunner(ghModelsClient);
+  const modelRunner = new ModelRunner();
 
   console.time("tool-call");
-  const toolCaller = await ghModelsClient.chat.completions.create({
+  const capiClient = new OpenAI({
+    baseURL: "https://api.githubcopilot.com",
+    apiKey,
+  });
+  const toolCaller = await capiClient.chat.completions.create({
     stream: false,
-    model: modelRunner.defaultModel,
+    model: "gpt-4",
     messages: req.body.messages,
     // tool_choice: "required", // Azure OpenAI doesn't support this yet
     tool_choice: "auto",
@@ -118,6 +118,10 @@ app.post("/", express.json(), async (req, res) => {
   console.timeEnd("function-exec");
 
   console.time("stream");
+  const ghModelsClient = new OpenAI({
+    baseURL: "https://models.inference.ai.azure.com",
+    apiKey,
+  });
   const stream = await ghModelsClient.chat.completions.create({
     model: functionCallRes.model,
     messages: functionCallRes.messages,
