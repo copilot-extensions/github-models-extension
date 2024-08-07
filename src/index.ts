@@ -1,25 +1,19 @@
 import express from "express";
 import OpenAI from "openai";
 import { ModelRunner, RunnerResponse } from "./model-runner";
-import { Readable } from "node:stream";
+import { verifySignatureMiddleware } from "./validate-signature";
 
 const app = express();
 
-// Set the port number for the server
-const port = Number(process.env.PORT || "3000");
-
-app.post("/", express.json(), async (req, res) => {
-  // Validate request signature
-
+app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
   // Create a new GitHub Models API client
   const apiKey = req.get("X-GitHub-Token");
-  const modelRunner = new ModelRunner();
-
-  console.time("tool-call");
   const capiClient = new OpenAI({
     baseURL: "https://api.githubcopilot.com",
     apiKey,
   });
+
+  console.time("tool-call");
   const toolCaller = await capiClient.chat.completions.create({
     stream: false,
     model: "gpt-4",
@@ -90,6 +84,7 @@ app.post("/", express.json(), async (req, res) => {
     return;
   }
 
+  const modelRunner = new ModelRunner();
   const functionToCall = toolCaller.choices[0].message.tool_calls[0].function;
   const args = JSON.parse(functionToCall.arguments);
 
@@ -140,6 +135,7 @@ app.post("/", express.json(), async (req, res) => {
   res.end();
 });
 
+const port = Number(process.env.PORT || "3000");
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });
