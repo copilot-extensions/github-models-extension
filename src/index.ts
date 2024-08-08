@@ -1,18 +1,18 @@
 import express from "express";
 import OpenAI from "openai";
-import {
-  listModels,
-  describeModel,
-  executeModel,
-  type RunnerResponse,
-} from "./functions";
 import { verifySignatureMiddleware } from "./validate-signature";
+import { describeModel } from "./functions/describe-model";
+import { executeModel } from "./functions/execute-model";
+import { listModels } from "./functions/list-models";
+import { RunnerResponse } from "./functions";
 
 const app = express();
 
 app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
-  // Create a new GitHub Models API client
+  // Use the GitHub API token sent in the request
   const apiKey = req.get("X-GitHub-Token");
+
+  // Use the Copilot API to determine which function to execute
   const capiClient = new OpenAI({
     baseURL: "https://api.githubcopilot.com",
     apiKey,
@@ -23,59 +23,8 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
     stream: false,
     model: "gpt-4",
     messages: req.body.messages,
-    // tool_choice: "required", // Azure OpenAI doesn't support this yet
     tool_choice: "auto",
-    tools: [
-      {
-        type: "function",
-        function: {
-          name: "list_models",
-          description: "Lists the available models.",
-          parameters: { type: "object", properties: {} },
-        },
-      },
-      {
-        type: "function",
-        function: {
-          name: "describe_model",
-          description: "Describes a model.",
-          parameters: {
-            type: "object",
-            properties: {
-              modelName: {
-                type: "string",
-                description:
-                  'The model to describe. Looks like "publisher/model-name".',
-              },
-            },
-            required: ["modelName"],
-          },
-        },
-      },
-      {
-        type: "function",
-        function: {
-          name: "execute_model",
-          description:
-            'Executes a model. This will often be used by saying something like "using <model>: <instruction>".',
-          parameters: {
-            type: "object",
-            properties: {
-              modelName: {
-                type: "string",
-                description:
-                  "The name of the model to execute. It is ONLY the name of the model, not the publisher or registry. For example: `gpt-4o`, or `cohere-command-r-plus`.",
-              },
-              instruction: {
-                type: "string",
-                description: "The instruction to execute.",
-              },
-            },
-            required: ["modelName", "instruction"],
-          },
-        },
-      },
-    ],
+    tools: [listModels.tool, describeModel.tool, executeModel.tool],
   });
   console.timeEnd("tool-call");
 
@@ -96,16 +45,16 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
   let functionCallRes: RunnerResponse;
   switch (functionToCall.name) {
     case "list_models":
-      functionCallRes = await listModels();
+      functionCallRes = await listModels.execute();
       break;
     case "describe_model":
-      functionCallRes = await describeModel({
-        modelName: args.modelName,
+      functionCallRes = await describeModel.execute({
+        model: args.model,
       });
       break;
     case "execute_model":
-      functionCallRes = await executeModel({
-        modelName: args.modelName,
+      functionCallRes = await executeModel.execute({
+        model: args.model,
         instruction: args.instruction,
       });
       break;
@@ -131,7 +80,6 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
   console.time("streaming");
   for await (const chunk of stream) {
     const chunkStr = "data: " + JSON.stringify(chunk) + "\n\n";
-    console.log(chunkStr);
     res.write(chunkStr);
   }
   res.write("data: [DONE]\n\n");
