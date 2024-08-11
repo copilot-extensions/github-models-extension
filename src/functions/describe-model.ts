@@ -1,3 +1,4 @@
+import OpenAI from "openai";
 import { RunnerResponse, defaultModel, Tool } from "../functions";
 
 export class describeModel extends Tool {
@@ -17,7 +18,10 @@ export class describeModel extends Tool {
     },
   };
 
-  async execute(args: { model: string }): Promise<RunnerResponse> {
+  async execute(
+    messages: OpenAI.ChatCompletionMessageParam[],
+    args: { model: string }
+  ): Promise<RunnerResponse> {
     const model = await this.modelsAPI.getModel(args.model);
 
     const systemMessage = [
@@ -35,7 +39,7 @@ export class describeModel extends Tool {
 
     return {
       model: defaultModel,
-      messages: [{ role: "system", content: systemMessage }],
+      messages: [{ role: "system", content: systemMessage }, ...messages],
     };
   }
 }

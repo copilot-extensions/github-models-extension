@@ -8,10 +8,7 @@ export const defaultModel = "gpt-4o-mini";
 // RunnerResponse is the response from a function call.
 export interface RunnerResponse {
   model: string;
-  messages: Array<
-    | OpenAI.Chat.ChatCompletionSystemMessageParam
-    | OpenAI.Chat.ChatCompletionUserMessageParam
-  >;
+  messages: OpenAI.ChatCompletionMessageParam[];
 }
 
 export class Tool {
@@ -29,7 +26,10 @@ export class Tool {
   }
   static definition: OpenAI.FunctionDefinition;
 
-  async execute(args: object): Promise<RunnerResponse> {
+  async execute(
+    messages: OpenAI.ChatCompletionMessageParam[],
+    args: object
+  ): Promise<RunnerResponse> {
     throw new Error("Not implemented");
   }
 }

@@ -1,3 +1,4 @@
+import OpenAI from "openai";
 import { RunnerResponse, Tool } from "../functions";
 
 export class executeModel extends Tool {
@@ -22,10 +23,13 @@ export class executeModel extends Tool {
     },
   };
 
-  async execute(args: {
-    model: string;
-    instruction: string;
-  }): Promise<RunnerResponse> {
+  async execute(
+    _: OpenAI.ChatCompletionMessageParam[],
+    args: {
+      model: string;
+      instruction: string;
+    }
+  ): Promise<RunnerResponse> {
     return {
       model: args.model,
       messages: [

@@ -66,11 +66,17 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
   const modelsAPI = new ModelsAPI(apiKey);
   let functionCallRes: RunnerResponse;
   try {
-    functionCallRes = await executeSelectedFunction(
-      modelsAPI,
-      functionToCall.name,
-      args
+    console.log("Executing function", functionToCall.name);
+    const klass = functions.find(
+      (f) => f.definition.name === functionToCall.name
     );
+    if (!klass) {
+      throw new Error("Unknown function");
+    }
+
+    console.log("\t with args", args);
+    const inst = new klass(modelsAPI);
+    functionCallRes = await inst.execute(req.body.messages, args);
   } catch (err) {
     console.error(err);
     res.status(500).end();
@@ -100,16 +106,3 @@ const port = Number(process.env.PORT || "3000");
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });
-
-async function executeSelectedFunction(
-  modelsAPI: ModelsAPI,
-  name: string,
-  args: any
-): Promise<RunnerResponse> {
-  const klass = functions.find((f) => f.definition.name === name);
-  if (!klass) {
-    throw new Error("Unknown function");
-  }
-  const inst = new klass(modelsAPI);
-  return inst.execute(args);
-}
