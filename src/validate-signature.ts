@@ -21,7 +21,6 @@ export async function verifySignatureMiddleware(
       const signature = req.get("GitHub-Public-Key-Signature") as string;
       const keyID = req.get("GitHub-Public-Key-Identifier") as string;
       const tokenForUser = req.get("X-GitHub-Token") as string;
-      console.log(req.body);
       await verifySignature(req.body, signature, keyID, tokenForUser);
 
       req.body = JSON.parse(req.body.toString("utf-8"));
