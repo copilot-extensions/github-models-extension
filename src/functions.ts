@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { ModelsAPI } from "./models-api";
 
 // defaultModel is the model used for internal calls - for tool calling,
 // or just for chat completions.
@@ -14,6 +15,12 @@ export interface RunnerResponse {
 }
 
 export class Tool {
+  modelsAPI: ModelsAPI;
+
+  constructor(modelsAPI: ModelsAPI) {
+    this.modelsAPI = modelsAPI;
+  }
+
   static get tool(): OpenAI.Chat.Completions.ChatCompletionTool {
     return {
       type: "function",
@@ -21,7 +28,8 @@ export class Tool {
     };
   }
   static definition: OpenAI.FunctionDefinition;
-  static async execute(args: object): Promise<RunnerResponse> {
+
+  async execute(args: object): Promise<RunnerResponse> {
     throw new Error("Not implemented");
   }
 }

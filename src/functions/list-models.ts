@@ -8,8 +8,8 @@ export class listModels extends Tool {
     parameters: { type: "object", properties: {} },
   };
 
-  static async execute(): Promise<RunnerResponse> {
-    const models = await modelsAPI.listModels();
+  async execute(): Promise<RunnerResponse> {
+    const models = await this.modelsAPI.listModels();
 
     const systemMessage = [
       "The user is asking for a list of available models.",

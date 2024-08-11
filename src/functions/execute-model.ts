@@ -22,7 +22,7 @@ export class executeModel extends Tool {
     },
   };
 
-  static async execute(args: {
+  async execute(args: {
     model: string;
     instruction: string;
   }): Promise<RunnerResponse> {

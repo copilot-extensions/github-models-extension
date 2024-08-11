@@ -1,5 +1,4 @@
 import { RunnerResponse, defaultModel, Tool } from "../functions";
-import { getModel } from "../models-api";
 
 export class describeModel extends Tool {
   static definition = {
@@ -18,8 +17,8 @@ export class describeModel extends Tool {
     },
   };
 
-  static async execute(args: { model: string }): Promise<RunnerResponse> {
-    const model = await getModel(args.model);
+  async execute(args: { model: string }): Promise<RunnerResponse> {
+    const model = await this.modelsAPI.getModel(args.model);
 
     const systemMessage = [
       "The user is asking about the AI model with the following details:",

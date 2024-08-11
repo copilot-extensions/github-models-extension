@@ -6,6 +6,7 @@ import { executeModel } from "./functions/execute-model";
 import { listModels } from "./functions/list-models";
 import { RunnerResponse } from "./functions";
 import { recommendModel } from "./functions/recommend-model";
+import { ModelsAPI } from "./models-api";
 
 // List of functions that are available to be called
 const functions = [listModels, describeModel, executeModel, recommendModel];
@@ -15,6 +16,10 @@ const app = express();
 app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
   // Use the GitHub API token sent in the request
   const apiKey = req.get("X-GitHub-Token");
+  if (!apiKey) {
+    res.status(400).end();
+    return;
+  }
 
   // Use the Copilot API to determine which function to execute
   const capiClient = new OpenAI({
@@ -38,7 +43,19 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
     !toolCaller.choices[0].message.tool_calls ||
     !toolCaller.choices[0].message.tool_calls[0].function
   ) {
-    res.status(500).end();
+    // No tool to call, so just call the model with the original messages
+    const stream = await capiClient.chat.completions.create({
+      stream: true,
+      model: "gpt-4",
+      messages: req.body.messages,
+    });
+
+    for await (const chunk of stream) {
+      const chunkStr = "data: " + JSON.stringify(chunk) + "\n\n";
+      res.write(chunkStr);
+    }
+    res.write("data: [DONE]\n\n");
+    res.end();
     return;
   }
 
@@ -46,9 +63,14 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
   const args = JSON.parse(functionToCall.arguments);
 
   console.time("function-exec");
+  const modelsAPI = new ModelsAPI(apiKey);
   let functionCallRes: RunnerResponse;
   try {
-    functionCallRes = await executeSelectedFunction(functionToCall.name, args);
+    functionCallRes = await executeSelectedFunction(
+      modelsAPI,
+      functionToCall.name,
+      args
+    );
   } catch (err) {
     console.error(err);
     res.status(500).end();
@@ -57,11 +79,7 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
   console.timeEnd("function-exec");
 
   console.time("stream");
-  const ghModelsClient = new OpenAI({
-    baseURL: "https://models.inference.ai.azure.com",
-    apiKey,
-  });
-  const stream = await ghModelsClient.chat.completions.create({
+  const stream = await modelsAPI.inference.chat.completions.create({
     model: functionCallRes.model,
     messages: functionCallRes.messages,
     stream: true,
@@ -84,12 +102,14 @@ app.listen(port, () => {
 });
 
 async function executeSelectedFunction(
+  modelsAPI: ModelsAPI,
   name: string,
   args: any
 ): Promise<RunnerResponse> {
-  const func = functions.find((f) => f.definition.name === name);
-  if (!func) {
+  const klass = functions.find((f) => f.definition.name === name);
+  if (!klass) {
     throw new Error("Unknown function");
   }
-  return func.execute(args);
+  const inst = new klass(modelsAPI);
+  return inst.execute(args);
 }

@@ -1,5 +1,4 @@
 import { RunnerResponse, defaultModel, Tool } from "../functions";
-import { listModels } from "../models-api";
 
 export class recommendModel extends Tool {
   static definition = {
@@ -9,8 +8,8 @@ export class recommendModel extends Tool {
     parameters: { type: "object", properties: {} },
   };
 
-  static async execute(): Promise<RunnerResponse> {
-    const models = await listModels();
+  async execute(): Promise<RunnerResponse> {
+    const models = await this.modelsAPI.listModels();
 
     const systemMessage = [
       "The user is asking for you to recommend the right model for their use-case.",
