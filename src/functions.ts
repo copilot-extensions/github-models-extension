@@ -4,21 +4,6 @@ import OpenAI from "openai";
 // or just for chat completions.
 export const defaultModel = "gpt-4o-mini";
 
-// Model is the structure of a model in the model catalog.
-export interface Model {
-  id: string;
-  name: string;
-  friendly_name: string;
-  model_version: number;
-  publisher: string;
-  model_family: string;
-  model_registry: string;
-  license: string;
-  task: string;
-  description: string;
-  summary: string;
-}
-
 // RunnerResponse is the response from a function call.
 export interface RunnerResponse {
   model: string;

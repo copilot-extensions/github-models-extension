@@ -5,6 +5,10 @@ import { describeModel } from "./functions/describe-model";
 import { executeModel } from "./functions/execute-model";
 import { listModels } from "./functions/list-models";
 import { RunnerResponse } from "./functions";
+import { recommendModel } from "./functions/recommend-model";
+
+// List of functions that are available to be called
+const functions = [listModels, describeModel, executeModel, recommendModel];
 
 const app = express();
 
@@ -24,7 +28,7 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
     model: "gpt-4",
     messages: req.body.messages,
     tool_choice: "auto",
-    tools: [listModels.tool, describeModel.tool, executeModel.tool],
+    tools: functions.map((f) => f.tool),
   });
   console.timeEnd("tool-call");
 
@@ -43,25 +47,12 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
 
   console.time("function-exec");
   let functionCallRes: RunnerResponse;
-  switch (functionToCall.name) {
-    case "list_models":
-      functionCallRes = await listModels.execute();
-      break;
-    case "describe_model":
-      functionCallRes = await describeModel.execute({
-        model: args.model,
-      });
-      break;
-    case "execute_model":
-      functionCallRes = await executeModel.execute({
-        model: args.model,
-        instruction: args.instruction,
-      });
-      break;
-    default:
-      console.log("Unknown function");
-      res.status(500).end();
-      return;
+  try {
+    functionCallRes = await executeSelectedFunction(functionToCall.name, args);
+  } catch (err) {
+    console.error(err);
+    res.status(500).end();
+    return;
   }
   console.timeEnd("function-exec");
 
@@ -91,3 +82,14 @@ const port = Number(process.env.PORT || "3000");
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
 });
+
+async function executeSelectedFunction(
+  name: string,
+  args: any
+): Promise<RunnerResponse> {
+  const func = functions.find((f) => f.definition.name === name);
+  if (!func) {
+    throw new Error("Unknown function");
+  }
+  return func.execute(args);
+}

@@ -1,4 +1,5 @@
-import { RunnerResponse, defaultModel, Model, Tool } from "../functions";
+import { RunnerResponse, defaultModel, Tool } from "../functions";
+import { getModel } from "../models-api";
 
 export class describeModel extends Tool {
   static definition = {
@@ -18,21 +19,7 @@ export class describeModel extends Tool {
   };
 
   static async execute(args: { model: string }): Promise<RunnerResponse> {
-    const modelRes = await fetch(
-      "https://modelcatalog.azure-api.net/v1/model/" + args.model
-    );
-    if (!modelRes.ok) {
-      return {
-        model: defaultModel,
-        messages: [
-          {
-            role: "system",
-            content: `Failed to fetch ${args.model} from the model catalog.`,
-          },
-        ],
-      };
-    }
-    const model = (await modelRes.json()) as Model;
+    const model = await getModel(args.model);
 
     const systemMessage = [
       "The user is asking about the AI model with the following details:",

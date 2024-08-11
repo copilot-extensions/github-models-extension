@@ -1,23 +1,24 @@
 import { RunnerResponse, defaultModel, Tool } from "../functions";
-import * as modelsAPI from "../models-api";
+import { listModels } from "../models-api";
 
-export class listModels extends Tool {
+export class recommendModel extends Tool {
   static definition = {
-    name: "list_models",
-    description: "Lists the available models.",
+    name: "recommend_model",
+    description:
+      "Recommends the best model according to the user's use-case, using the available models.",
     parameters: { type: "object", properties: {} },
   };
 
   static async execute(): Promise<RunnerResponse> {
-    const models = await modelsAPI.listModels();
+    const models = await listModels();
 
     const systemMessage = [
-      "The user is asking for a list of available models.",
-      "Respond with a concise and readable list of the models, with a short description for each one.",
-      "Use markdown formatting to make each description more readable.",
-      "Begin each model's description with a header consisting of the model's registry and name",
-      "The header must be formatted as `<registry>/<name>`.",
-      "That list is as follows:",
+      "The user is asking for you to recommend the right model for their use-case.",
+      "Explain your reasoning, and why you recommend the model you choose.",
+      "Provide a summary of the model's capabilities and limitations.",
+      "Include any relevant information that the user should know.",
+      "Use the available models to make your recommendation.",
+      "The list of available models is as follows:",
     ];
 
     for (const model of models) {
