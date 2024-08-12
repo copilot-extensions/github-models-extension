@@ -15,6 +15,23 @@ export interface Model {
   summary: string;
 }
 
+export type ModelSchema = {
+  parameters: ModelSchemaParameter[];
+  capabilities: Record<string, boolean>;
+};
+
+export type ModelSchemaParameter = {
+  key: string;
+  type: "number" | "integer" | "array" | "string" | "boolean";
+  payloadPath: string;
+  default?: number | string | boolean | any[];
+  min?: number;
+  max?: number;
+  required: boolean;
+  description?: string;
+  friendlyName?: string;
+};
+
 export class ModelsAPI {
   inference: OpenAI;
 
@@ -34,6 +51,19 @@ export class ModelsAPI {
     }
     const model = (await modelRes.json()) as Model;
     return model;
+  }
+
+  async getModelSchema(modelName: string): Promise<ModelSchema> {
+    const modelSchemaRes = await fetch(
+      `https://modelcatalogcachev2-ebendjczf0c5dzca.b02.azurefd.net/widgets/en/Serverless/${modelName.toLowerCase()}.json`
+    );
+    if (!modelSchemaRes.ok) {
+      throw new Error(
+        `Failed to fetch ${modelName} schema from the model catalog.`
+      );
+    }
+    const modelSchema = (await modelSchemaRes.json()) as ModelSchema;
+    return modelSchema;
   }
 
   async listModels(): Promise<Model[]> {

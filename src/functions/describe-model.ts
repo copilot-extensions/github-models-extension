@@ -22,7 +22,10 @@ export class describeModel extends Tool {
     messages: OpenAI.ChatCompletionMessageParam[],
     args: { model: string }
   ): Promise<RunnerResponse> {
-    const model = await this.modelsAPI.getModel(args.model);
+    const [model, modelSchema] = await Promise.all([
+      this.modelsAPI.getModel(args.model),
+      this.modelsAPI.getModelSchema(args.model),
+    ]);
 
     const systemMessage = [
       "The user is asking about the AI model with the following details:",
@@ -35,6 +38,12 @@ export class describeModel extends Tool {
       `\tTask: ${model.task}`,
       `\tDescription: ${model.description}`,
       `\tSummary: ${model.summary}`,
+      "\n",
+      "API requests for this model use the following schema:",
+      "\n",
+      "```json",
+      JSON.stringify(modelSchema, null, 2),
+      "```",
     ].join("\n");
 
     return {
