@@ -1,11 +1,11 @@
-FROM node:slim AS builder
+FROM node:20.16.0-alpine AS builder
 WORKDIR /usr/src/app
 COPY package*.json ./
 RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM node:slim
+FROM node:20.16.0-alpine
 ENV NODE_ENV=production
 USER node
 WORKDIR /usr/src/app
