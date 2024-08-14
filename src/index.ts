@@ -102,6 +102,11 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
   res.end();
 });
 
+// Health check
+app.get("/", (req, res) => {
+  res.send("OK");
+});
+
 const port = Number(process.env.PORT || "3000");
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
