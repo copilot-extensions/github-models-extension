@@ -11,7 +11,7 @@ export class describeModel extends Tool {
         model: {
           type: "string",
           description:
-            'The model to describe. Looks like "publisher/model-name".',
+            'The model to describe. Looks like "registry/model-name". For example, `azureml/Phi-3-medium-128k-instruct` or `azure-openai/gpt-4o',
         },
       },
       required: ["model"],

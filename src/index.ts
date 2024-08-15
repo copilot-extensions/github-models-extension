@@ -39,7 +39,9 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
         "Here is a list of some of the models available to the user:",
         JSON.stringify(
           models.map((model) => ({
-            name: `${model.publisher}/${model.name}`,
+            name: model.name,
+            publisher: model.publisher,
+            registry: model.model_registry,
             description: model.summary,
           }))
         ),
