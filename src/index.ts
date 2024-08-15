@@ -7,10 +7,6 @@ import { listModels } from "./functions/list-models";
 import { RunnerResponse } from "./functions";
 import { recommendModel } from "./functions/recommend-model";
 import { ModelsAPI } from "./models-api";
-
-// List of functions that are available to be called
-const functions = [listModels, describeModel, executeModel, recommendModel];
-
 const app = express();
 
 app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
@@ -20,6 +16,15 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
     res.status(400).end();
     return;
   }
+
+  // List of functions that are available to be called
+  const modelsAPI = new ModelsAPI(apiKey);
+  const functions = [
+    listModels,
+    describeModel,
+    executeModel,
+    recommendModel,
+  ].map((f) => new f(modelsAPI));
 
   // Use the Copilot API to determine which function to execute
   const capiClient = new OpenAI({
@@ -63,20 +68,18 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
   const args = JSON.parse(functionToCall.arguments);
 
   console.time("function-exec");
-  const modelsAPI = new ModelsAPI(apiKey);
   let functionCallRes: RunnerResponse;
   try {
     console.log("Executing function", functionToCall.name);
-    const klass = functions.find(
+    const funcClass = functions.find(
       (f) => f.definition.name === functionToCall.name
     );
-    if (!klass) {
+    if (!funcClass) {
       throw new Error("Unknown function");
     }
 
     console.log("\t with args", args);
-    const inst = new klass(modelsAPI);
-    functionCallRes = await inst.execute(req.body.messages, args);
+    functionCallRes = await funcClass.execute(req.body.messages, args);
   } catch (err) {
     console.error(err);
     res.status(500).end();

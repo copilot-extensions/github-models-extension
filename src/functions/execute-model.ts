@@ -2,7 +2,7 @@ import OpenAI from "openai";
 import { RunnerResponse, Tool } from "../functions";
 
 export class executeModel extends Tool {
-  static definition = {
+  definition = {
     name: "execute_model",
     description:
       'Executes a model. This will often be used by saying something like "using <model>: <instruction>".',
