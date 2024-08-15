@@ -34,6 +34,7 @@ export type ModelSchemaParameter = {
 
 export class ModelsAPI {
   inference: OpenAI;
+  private _models: Model[] | null = null;
 
   constructor(apiKey: string) {
     this.inference = new OpenAI({
@@ -67,6 +68,10 @@ export class ModelsAPI {
   }
 
   async listModels(): Promise<Model[]> {
+    if (this._models) {
+      return this._models;
+    }
+
     const modelsRes = await fetch(
       "https://modelcatalog.azure-api.net/v1/models"
     );
@@ -75,6 +80,7 @@ export class ModelsAPI {
     }
 
     const models = (await modelsRes.json()) as Model[];
+    this._models = models;
     return models;
   }
 }
