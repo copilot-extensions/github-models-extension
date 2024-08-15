@@ -27,11 +27,32 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
     apiKey,
   });
 
+  // Prepend a system message that includes the list of models, so that
+  // tool calls can better select the right model to use.
+  const models = await modelsAPI.listModels();
+  const toolCallMessages = [
+    {
+      role: "system",
+      content: [
+        "You are an extension of GitHub Copilot, built to interact with GitHub Models.",
+        "GitHub Models is a language model playground, where you can experiment with different models and see how they respond to your prompts.",
+        "Here is a list of some of the models available to the user:",
+        JSON.stringify(
+          models.map((model) => ({
+            name: `${model.publisher}/${model.name}`,
+            description: model.summary,
+          }))
+        ),
+      ].join("\n"),
+    },
+    ...req.body.messages,
+  ].concat(req.body.messages);
+
   console.time("tool-call");
   const toolCaller = await capiClient.chat.completions.create({
     stream: false,
     model: "gpt-4",
-    messages: req.body.messages,
+    messages: toolCallMessages,
     tool_choice: "auto",
     tools: functions.map((f) => f.tool),
   });
