@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { RunnerResponse, defaultModel, Tool } from "../functions";
+import { ModelsAPI } from "../models-api";
 
 export class recommendModel extends Tool {
   static definition = {

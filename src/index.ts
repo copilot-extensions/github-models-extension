@@ -7,10 +7,6 @@ import { listModels } from "./functions/list-models";
 import { RunnerResponse } from "./functions";
 import { recommendModel } from "./functions/recommend-model";
 import { ModelsAPI } from "./models-api";
-
-// List of functions that are available to be called
-const functions = [listModels, describeModel, executeModel, recommendModel];
-
 const app = express();
 
 app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
@@ -21,17 +17,44 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
     return;
   }
 
+  // List of functions that are available to be called
+  const modelsAPI = new ModelsAPI(apiKey);
+  const functions = [listModels, describeModel, executeModel, recommendModel];
+
   // Use the Copilot API to determine which function to execute
   const capiClient = new OpenAI({
     baseURL: "https://api.githubcopilot.com",
     apiKey,
   });
 
+  // Prepend a system message that includes the list of models, so that
+  // tool calls can better select the right model to use.
+  const models = await modelsAPI.listModels();
+  const toolCallMessages = [
+    {
+      role: "system",
+      content: [
+        "You are an extension of GitHub Copilot, built to interact with GitHub Models.",
+        "GitHub Models is a language model playground, where you can experiment with different models and see how they respond to your prompts.",
+        "Here is a list of some of the models available to the user:",
+        JSON.stringify(
+          models.map((model) => ({
+            name: model.name,
+            publisher: model.publisher,
+            registry: model.model_registry,
+            description: model.summary,
+          }))
+        ),
+      ].join("\n"),
+    },
+    ...req.body.messages,
+  ].concat(req.body.messages);
+
   console.time("tool-call");
   const toolCaller = await capiClient.chat.completions.create({
     stream: false,
     model: "gpt-4",
-    messages: req.body.messages,
+    messages: toolCallMessages,
     tool_choice: "auto",
     tools: functions.map((f) => f.tool),
   });
@@ -63,20 +86,19 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
   const args = JSON.parse(functionToCall.arguments);
 
   console.time("function-exec");
-  const modelsAPI = new ModelsAPI(apiKey);
   let functionCallRes: RunnerResponse;
   try {
     console.log("Executing function", functionToCall.name);
-    const klass = functions.find(
+    const funcClass = functions.find(
       (f) => f.definition.name === functionToCall.name
     );
-    if (!klass) {
+    if (!funcClass) {
       throw new Error("Unknown function");
     }
 
     console.log("\t with args", args);
-    const inst = new klass(modelsAPI);
-    functionCallRes = await inst.execute(req.body.messages, args);
+    const func = new funcClass(modelsAPI);
+    functionCallRes = await func.execute(req.body.messages, args);
   } catch (err) {
     console.error(err);
     res.status(500).end();

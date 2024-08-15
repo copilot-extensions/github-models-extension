@@ -11,8 +11,9 @@ export interface RunnerResponse {
   messages: OpenAI.ChatCompletionMessageParam[];
 }
 
-export class Tool {
+export abstract class Tool {
   modelsAPI: ModelsAPI;
+  static definition: OpenAI.FunctionDefinition;
 
   constructor(modelsAPI: ModelsAPI) {
     this.modelsAPI = modelsAPI;
@@ -24,12 +25,9 @@ export class Tool {
       function: this.definition,
     };
   }
-  static definition: OpenAI.FunctionDefinition;
 
-  async execute(
+  abstract execute(
     messages: OpenAI.ChatCompletionMessageParam[],
     args: object
-  ): Promise<RunnerResponse> {
-    throw new Error("Not implemented");
-  }
+  ): Promise<RunnerResponse>;
 }
