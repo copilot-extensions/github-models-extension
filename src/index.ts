@@ -19,12 +19,7 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
 
   // List of functions that are available to be called
   const modelsAPI = new ModelsAPI(apiKey);
-  const functions = [
-    listModels,
-    describeModel,
-    executeModel,
-    recommendModel,
-  ].map((f) => new f(modelsAPI));
+  const functions = [listModels, describeModel, executeModel, recommendModel];
 
   // Use the Copilot API to determine which function to execute
   const capiClient = new OpenAI({
@@ -79,7 +74,8 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
     }
 
     console.log("\t with args", args);
-    functionCallRes = await funcClass.execute(req.body.messages, args);
+    const func = new funcClass(modelsAPI);
+    functionCallRes = await func.execute(req.body.messages, args);
   } catch (err) {
     console.error(err);
     res.status(500).end();

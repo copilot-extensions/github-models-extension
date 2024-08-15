@@ -13,13 +13,13 @@ export interface RunnerResponse {
 
 export abstract class Tool {
   modelsAPI: ModelsAPI;
-  abstract definition: OpenAI.FunctionDefinition;
+  static definition: OpenAI.FunctionDefinition;
 
   constructor(modelsAPI: ModelsAPI) {
     this.modelsAPI = modelsAPI;
   }
 
-  get tool(): OpenAI.Chat.Completions.ChatCompletionTool {
+  static get tool(): OpenAI.Chat.Completions.ChatCompletionTool {
     return {
       type: "function",
       function: this.definition,

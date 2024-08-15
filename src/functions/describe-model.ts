@@ -2,7 +2,7 @@ import OpenAI from "openai";
 import { RunnerResponse, defaultModel, Tool } from "../functions";
 
 export class describeModel extends Tool {
-  definition = {
+  static definition = {
     name: "describe_model",
     description: "Describes a model.",
     parameters: {

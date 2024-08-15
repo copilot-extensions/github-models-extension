@@ -3,7 +3,7 @@ import { RunnerResponse, defaultModel, Tool } from "../functions";
 import * as modelsAPI from "../models-api";
 
 export class listModels extends Tool {
-  definition = {
+  static definition = {
     name: "list_models",
     description: "Lists the available models.",
     parameters: { type: "object", properties: {} },
