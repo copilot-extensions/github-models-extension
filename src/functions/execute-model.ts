@@ -56,7 +56,7 @@ Example Queries (IMPORTANT: Phrasing doesn't have to match):
       "Do not include any additional information about the selected model in this first sentence - ONLY the name.",
     ];
 
-    if (importantRefs) {
+    if (importantRefs.length > 0) {
       content.push(
         "The user included the following context - you may find information in this context useful for your response:",
         JSON.stringify(importantRefs)
