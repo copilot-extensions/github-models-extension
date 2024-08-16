@@ -19,7 +19,7 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
 
   // List of functions that are available to be called
   const modelsAPI = new ModelsAPI(apiKey);
-  const functions = [listModels, describeModel, executeModel, recommendModel];
+  const functions = [listModels, describeModel, executeModel];
 
   // Use the Copilot API to determine which function to execute
   const capiClient = new OpenAI({
@@ -66,6 +66,7 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
     !toolCaller.choices[0].message.tool_calls ||
     !toolCaller.choices[0].message.tool_calls[0].function
   ) {
+    console.log("No tool call found");
     // No tool to call, so just call the model with the original messages
     const stream = await capiClient.chat.completions.create({
       stream: true,
