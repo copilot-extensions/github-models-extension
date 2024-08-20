@@ -1,13 +1,17 @@
 import OpenAI from "openai";
 import { RunnerResponse, defaultModel, Tool } from "../functions";
-import { ModelsAPI } from "../models-api";
 
 export class recommendModel extends Tool {
   static definition = {
     name: "recommend_model",
     description:
-      "Recommends the best model according to the user's use-case, using the available models.",
-    parameters: { type: "object", properties: {} },
+      "Determines and recommends the most appropriate machine learning model based on the provided use-case. This function uses the available list of models to make the recommendation.",
+    parameters: {
+      type: "object",
+      properties: {},
+      description:
+        "This function does not require any input parameters. It uses internal logic to recommend the best model based on the provided use-case.",
+    },
   };
 
   async execute(

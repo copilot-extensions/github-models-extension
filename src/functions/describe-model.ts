@@ -4,7 +4,7 @@ import { RunnerResponse, defaultModel, Tool } from "../functions";
 export class describeModel extends Tool {
   static definition = {
     name: "describe_model",
-    description: "Describes a model.",
+    description: "Describes a specific model.",
     parameters: {
       type: "object",
       properties: {

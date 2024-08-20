@@ -1,12 +1,17 @@
 import OpenAI from "openai";
 import { RunnerResponse, defaultModel, Tool } from "../functions";
-import * as modelsAPI from "../models-api";
 
 export class listModels extends Tool {
   static definition = {
     name: "list_models",
-    description: "Lists the available models.",
-    parameters: { type: "object", properties: {} },
+    description:
+      "This function lists the AI models available in GitHub Models.",
+    parameters: {
+      type: "object",
+      properties: {},
+      description:
+        "This function does not require any input parameters. It simply returns a list of models.",
+    },
   };
 
   async execute(
@@ -20,7 +25,7 @@ export class listModels extends Tool {
       "Use markdown formatting to make each description more readable.",
       "Begin each model's description with a header consisting of the model's registry and name",
       "The header must be formatted as `<registry>/<name>`.",
-      "That list is as follows:",
+      "That list of models is as follows:",
     ];
 
     for (const model of models) {
