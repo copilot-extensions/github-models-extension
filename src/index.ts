@@ -1,12 +1,12 @@
 import express from "express";
 import OpenAI from "openai";
-import { verifySignatureMiddleware } from "./validate-signature";
-import { describeModel } from "./functions/describe-model";
-import { executeModel } from "./functions/execute-model";
-import { listModels } from "./functions/list-models";
-import { RunnerResponse } from "./functions";
-import { recommendModel } from "./functions/recommend-model";
-import { ModelsAPI } from "./models-api";
+import { verifySignatureMiddleware } from "./validate-signature.js";
+import { describeModel } from "./functions/describe-model.js";
+import { executeModel } from "./functions/execute-model.js";
+import { listModels } from "./functions/list-models.js";
+import { RunnerResponse } from "./functions.js";
+import { recommendModel } from "./functions/recommend-model.js";
+import { ModelsAPI } from "./models-api.js";
 const app = express();
 
 app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {

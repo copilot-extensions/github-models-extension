@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { ModelsAPI } from "./models-api";
+import { ModelsAPI } from "./models-api.js";
 
 // defaultModel is the model used for internal calls - for tool calling,
 // or just for chat completions.
