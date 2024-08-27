@@ -119,16 +119,6 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
 
     console.time("streaming");
     for await (const chunk of stream) {
-      // There's a bug in the Copilot API where it requires a valid usage object
-      // in the response, even when we tell it not to include one.
-      // This is a workaround for that.
-      if (!chunk.usage) {
-        chunk.usage = {
-          completion_tokens: 0,
-          prompt_tokens: 0,
-          total_tokens: 0,
-        };
-      }
       const chunkStr = "data: " + JSON.stringify(chunk) + "\n\n";
       res.write(chunkStr);
     }
