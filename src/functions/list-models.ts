@@ -23,25 +23,16 @@ export class listModels extends Tool {
       "The user is asking for a list of available models.",
       "Respond with a concise and readable list of the models, with a short description for each one.",
       "Use markdown formatting to make each description more readable.",
-      "Begin each model's description with a header consisting of the model's registry and name",
-      "The header must be formatted as `<registry>/<name>`.",
+      "Begin each model's description with a header consisting of the model's name",
       "That list of models is as follows:",
+      JSON.stringify(
+        models.map((model) => ({
+          name: model.friendly_name,
+          publisher: model.publisher,
+          description: model.summary,
+        }))
+      ),
     ];
-
-    for (const model of models) {
-      systemMessage.push(
-        [
-          `\t- Model Name: ${model.name}`,
-          `\t\tModel Version: ${model.model_version}`,
-          `\t\tPublisher: ${model.publisher}`,
-          `\t\tModel Family: ${model.model_family}`,
-          `\t\tModel Registry: ${model.model_registry}`,
-          `\t\tLicense: ${model.license}`,
-          `\t\tTask: ${model.task}`,
-          `\t\tSummary: ${model.summary}`,
-        ].join("\n")
-      );
-    }
 
     return {
       model: defaultModel,
