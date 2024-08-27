@@ -37,14 +37,17 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
         "You are an extension of GitHub Copilot, built to interact with GitHub Models.",
         "GitHub Models is a language model playground, where you can experiment with different models and see how they respond to your prompts.",
         "Here is a list of some of the models available to the user:",
+        "<-- LIST OF MODELS -->",
         JSON.stringify(
           models.map((model) => ({
+            friendly_name: model.friendly_name,
             name: model.name,
             publisher: model.publisher,
             registry: model.model_registry,
             description: model.summary,
           }))
         ),
+        "<-- END OF LIST OF MODELS -->",
       ].join("\n"),
     },
     ...req.body.messages,
