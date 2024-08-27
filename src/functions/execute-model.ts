@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { RunnerResponse, Tool } from "../functions";
+import { RunnerResponse, Tool } from "../functions.js";
 
 type MessageWithReferences = OpenAI.ChatCompletionMessageParam & {
   copilot_references: Reference[];

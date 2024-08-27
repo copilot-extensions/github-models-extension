@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { RunnerResponse, defaultModel, Tool } from "../functions";
+import { RunnerResponse, defaultModel, Tool } from "../functions.js";
 
 export class listModels extends Tool {
   static definition = {
