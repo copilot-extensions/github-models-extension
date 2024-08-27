@@ -107,22 +107,38 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
   }
   console.timeEnd("function-exec");
 
-  console.time("stream");
-  const stream = await modelsAPI.inference.chat.completions.create({
-    model: functionCallRes.model,
-    messages: functionCallRes.messages,
-    stream: true,
-  });
-  console.timeEnd("stream");
+  try {
+    const stream = await modelsAPI.inference.chat.completions.create({
+      model: functionCallRes.model,
+      messages: functionCallRes.messages,
+      stream: true,
+      stream_options: {
+        include_usage: false,
+      },
+    });
 
-  console.time("streaming");
-  for await (const chunk of stream) {
-    const chunkStr = "data: " + JSON.stringify(chunk) + "\n\n";
-    res.write(chunkStr);
+    console.time("streaming");
+    for await (const chunk of stream) {
+      // There's a bug in the Copilot API where it requires a valid usage object
+      // in the response, even when we tell it not to include one.
+      // This is a workaround for that.
+      if (!chunk.usage) {
+        chunk.usage = {
+          completion_tokens: 0,
+          prompt_tokens: 0,
+          total_tokens: 0,
+        };
+      }
+      const chunkStr = "data: " + JSON.stringify(chunk) + "\n\n";
+      res.write(chunkStr);
+    }
+    res.write("data: [DONE]\n\n");
+    console.timeEnd("streaming");
+    res.end();
+  } catch (err) {
+    console.error(err);
+    res.status(500).end();
   }
-  res.write("data: [DONE]\n\n");
-  console.timeEnd("streaming");
-  res.end();
 });
 
 // Health check
