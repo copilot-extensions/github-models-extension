@@ -37,14 +37,17 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
         "You are an extension of GitHub Copilot, built to interact with GitHub Models.",
         "GitHub Models is a language model playground, where you can experiment with different models and see how they respond to your prompts.",
         "Here is a list of some of the models available to the user:",
+        "<-- LIST OF MODELS -->",
         JSON.stringify(
           models.map((model) => ({
+            friendly_name: model.friendly_name,
             name: model.name,
             publisher: model.publisher,
             registry: model.model_registry,
             description: model.summary,
           }))
         ),
+        "<-- END OF LIST OF MODELS -->",
       ].join("\n"),
     },
     ...req.body.messages,
@@ -107,22 +110,28 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
   }
   console.timeEnd("function-exec");
 
-  console.time("stream");
-  const stream = await modelsAPI.inference.chat.completions.create({
-    model: functionCallRes.model,
-    messages: functionCallRes.messages,
-    stream: true,
-  });
-  console.timeEnd("stream");
+  try {
+    const stream = await modelsAPI.inference.chat.completions.create({
+      model: functionCallRes.model,
+      messages: functionCallRes.messages,
+      stream: true,
+      stream_options: {
+        include_usage: false,
+      },
+    });
 
-  console.time("streaming");
-  for await (const chunk of stream) {
-    const chunkStr = "data: " + JSON.stringify(chunk) + "\n\n";
-    res.write(chunkStr);
+    console.time("streaming");
+    for await (const chunk of stream) {
+      const chunkStr = "data: " + JSON.stringify(chunk) + "\n\n";
+      res.write(chunkStr);
+    }
+    res.write("data: [DONE]\n\n");
+    console.timeEnd("streaming");
+    res.end();
+  } catch (err) {
+    console.error(err);
+    res.status(500).end();
   }
-  res.write("data: [DONE]\n\n");
-  console.timeEnd("streaming");
-  res.end();
 });
 
 // Health check
