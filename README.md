@@ -15,10 +15,9 @@ You can ask it things like "what models are available?" or "which model should I
 
 | Description | Image |
 | --- |--- |
-| User asking `@models` for a recommended model that is low-cost and supports function calling | ![User asking @gh-models for a recommended model that is low-cost and supports function calling](https://github.com/user-attachments/assets/aed29aa3-2056-44c5-8c7b-e8ef7ffa3301) |
-| Dialogue with the Extension, asking for an OpenAI model | ![Dialogue with the Extension, asking for an OpenAI model](https://github.com/user-attachments/assets/f08b23a9-7f2c-4da7-b764-7220dcda9408) |
-| User executing a basic prompt using the model that the extension recommended | ![User executing a basic prompt using the model that the extension recommended](https://github.com/user-attachments/assets/795dd669-aea2-4b88-9c27-0836008c28a4) |
-| In VS Code, explain code using a specific model | <img width="838" alt="image" src="https://github.com/user-attachments/assets/c019ed37-5494-4cb6-9e21-82ecf3235dcc"> |
+| User asking `@models` for a recommended model that is low-cost and supports function calling | ![User asking @models for a recommended model that is low-cost and supports function calling](https://github.com/user-attachments/assets/b0c2710d-3d3e-46af-a021-864a17fb5a9c) |
+| Dialogue with the Extension, asking for an OpenAI model | ![Dialogue with the Extension, asking for an OpenAI model](https://github.com/user-attachments/assets/1d042c46-895f-43f7-9ab4-2f261811c6b1) |
+| User executing a basic prompt using the model that the extension recommended | ![User executing a basic prompt using the model that the extension recommended](https://github.com/user-attachments/assets/688951dc-c02d-40df-a226-c5da8900b633) |
 
 ## Development
 
