@@ -1,5 +1,6 @@
+import { createServer, IncomingMessage } from "node:http";
+
 import { verifyAndParseRequest, createAckEvent } from "@copilot-extensions/preview-sdk";
-import express from "express";
 import OpenAI from "openai";
 
 import { describeModel } from "./functions/describe-model.js";
@@ -9,20 +10,28 @@ import { RunnerResponse } from "./functions.js";
 import { recommendModel } from "./functions/recommend-model.js";
 import { ModelsAPI } from "./models-api.js";
 
-const app = express();
+const server = createServer(async (request, response) => {
+  if (request.method === "GET") {
+    response.statusCode = 200;
+    response.end(`OK`);
+    return;
+  }
 
-app.post("/", express.text({ type: "*/*" }), async (req, res) => {
+  const body = await getBody(request);
+
   let verifyAndParseRequestResult: Awaited<ReturnType<typeof verifyAndParseRequest>>;
+  let apiKey: string;
   try {
-    const signature = req.get("GitHub-Public-Key-Signature") as string;
-    const keyID = req.get("GitHub-Public-Key-Identifier") as string;
-    const tokenForUser = req.get("X-GitHub-Token") as string;
-    verifyAndParseRequestResult = await verifyAndParseRequest(req.body, signature, keyID, {
-      token: tokenForUser,
+    const signature = request.headers["github-public-key-signature"] as string;
+    const keyID = request.headers["github-public-key-identifier"] as string;
+    apiKey = request.headers["x-github-token"] as string;
+    verifyAndParseRequestResult = await verifyAndParseRequest(body, signature, keyID, {
+      token: apiKey,
     });
   } catch (err) {
     console.error(err);
-    res.status(401).end("Unauthorized");
+    response.statusCode = 401
+    response.end("Unauthorized");
     return
   }
 
@@ -30,19 +39,20 @@ app.post("/", express.text({ type: "*/*" }), async (req, res) => {
 
   if (!isValidRequest) {
     console.log("Signature verification failed");
-    return res.status(401).send("Unauthorized");
+    response.statusCode = 401
+    response.end("Unauthorized");
   }
 
   console.log("Signature verified");
 
   // Use the GitHub API token sent in the request
-  const apiKey = req.get("X-GitHub-Token");
   if (!apiKey) {
-    res.status(400).end();
+    response.statusCode = 400
+    response.end()
     return;
   }
 
-  res.write(createAckEvent().toString());
+  response.write(createAckEvent().toString());
 
   // List of functions that are available to be called
   const modelsAPI = new ModelsAPI(apiKey);
@@ -84,6 +94,7 @@ app.post("/", express.text({ type: "*/*" }), async (req, res) => {
   const toolCaller = await capiClient.chat.completions.create({
     stream: false,
     model: "gpt-4",
+    // @ts-expect-error - TODO @gr2m - type incompatibility between @openai/api and @copilot-extensions/preview-sdk
     messages: toolCallMessages,
     tool_choice: "auto",
     tools: functions.map((f) => f.tool),
@@ -101,15 +112,16 @@ app.post("/", express.text({ type: "*/*" }), async (req, res) => {
     const stream = await capiClient.chat.completions.create({
       stream: true,
       model: "gpt-4",
+      // @ts-expect-error - TODO @gr2m - type incompatibility between @openai/api and @copilot-extensions/preview-sdk
       messages: payload.messages,
     });
 
     for await (const chunk of stream) {
       const chunkStr = "data: " + JSON.stringify(chunk) + "\n\n";
-      res.write(chunkStr);
+      response.write(chunkStr);
     }
-    res.write("data: [DONE]\n\n");
-    res.end();
+    response.write("data: [DONE]\n\n");
+    response.end();
     return;
   }
 
@@ -129,10 +141,12 @@ app.post("/", express.text({ type: "*/*" }), async (req, res) => {
 
     console.log("\t with args", args);
     const func = new funcClass(modelsAPI);
+    // @ts-expect-error - TODO @gr2m - type incompatibility between @openai/api and @copilot-extensions/preview-sdk
     functionCallRes = await func.execute(payload.messages, args);
   } catch (err) {
     console.error(err);
-    res.status(500).end();
+    response.statusCode = 500
+    response.end();
     return;
   }
   console.timeEnd("function-exec");
@@ -150,23 +164,33 @@ app.post("/", express.text({ type: "*/*" }), async (req, res) => {
     console.time("streaming");
     for await (const chunk of stream) {
       const chunkStr = "data: " + JSON.stringify(chunk) + "\n\n";
-      res.write(chunkStr);
+      response.write(chunkStr);
     }
-    res.write("data: [DONE]\n\n");
+    response.write("data: [DONE]\n\n");
     console.timeEnd("streaming");
-    res.end();
+    response.end();
   } catch (err) {
     console.error(err);
-    res.status(500).end();
+    response.statusCode = 500
+    response.end()
   }
 });
 
-// Health check
-app.get("/", (req, res) => {
-  res.send("OK");
-});
+const port = process.env.PORT || "3000"
+server.listen(port);
+console.log(`Server running at http://localhost:${port}`);
 
-const port = Number(process.env.PORT || "3000");
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
-});
+function getBody(request: IncomingMessage): Promise<string> {
+  return new Promise((resolve) => {
+    const bodyParts: any[] = [];
+    let body;
+    request
+      .on("data", (chunk) => {
+        bodyParts.push(chunk);
+      })
+      .on("end", () => {
+        body = Buffer.concat(bodyParts).toString();
+        resolve(body);
+      });
+  });
+}
