@@ -1,21 +1,48 @@
+import { verifyAndParseRequest, createAckEvent } from "@copilot-extensions/preview-sdk";
 import express from "express";
 import OpenAI from "openai";
-import { verifySignatureMiddleware } from "./validate-signature.js";
+
 import { describeModel } from "./functions/describe-model.js";
 import { executeModel } from "./functions/execute-model.js";
 import { listModels } from "./functions/list-models.js";
 import { RunnerResponse } from "./functions.js";
 import { recommendModel } from "./functions/recommend-model.js";
 import { ModelsAPI } from "./models-api.js";
+
 const app = express();
 
-app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
+app.post("/", express.text({ type: "*/*" }), async (req, res) => {
+  let verifyAndParseRequestResult: Awaited<ReturnType<typeof verifyAndParseRequest>>;
+  try {
+    const signature = req.get("GitHub-Public-Key-Signature") as string;
+    const keyID = req.get("GitHub-Public-Key-Identifier") as string;
+    const tokenForUser = req.get("X-GitHub-Token") as string;
+    verifyAndParseRequestResult = await verifyAndParseRequest(req.body, signature, keyID, {
+      token: tokenForUser,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(401).end("Unauthorized");
+    return
+  }
+
+  const { isValidRequest, payload } = verifyAndParseRequestResult
+
+  if (!isValidRequest) {
+    console.log("Signature verification failed");
+    return res.status(401).send("Unauthorized");
+  }
+
+  console.log("Signature verified");
+
   // Use the GitHub API token sent in the request
   const apiKey = req.get("X-GitHub-Token");
   if (!apiKey) {
     res.status(400).end();
     return;
   }
+
+  res.write(createAckEvent().toString());
 
   // List of functions that are available to be called
   const modelsAPI = new ModelsAPI(apiKey);
@@ -50,8 +77,8 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
         "<-- END OF LIST OF MODELS -->",
       ].join("\n"),
     },
-    ...req.body.messages,
-  ].concat(req.body.messages);
+    ...payload.messages,
+  ].concat(payload.messages);
 
   console.time("tool-call");
   const toolCaller = await capiClient.chat.completions.create({
@@ -74,7 +101,7 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
     const stream = await capiClient.chat.completions.create({
       stream: true,
       model: "gpt-4",
-      messages: req.body.messages,
+      messages: payload.messages,
     });
 
     for await (const chunk of stream) {
@@ -102,7 +129,7 @@ app.post("/", verifySignatureMiddleware, express.json(), async (req, res) => {
 
     console.log("\t with args", args);
     const func = new funcClass(modelsAPI);
-    functionCallRes = await func.execute(req.body.messages, args);
+    functionCallRes = await func.execute(payload.messages, args);
   } catch (err) {
     console.error(err);
     res.status(500).end();
