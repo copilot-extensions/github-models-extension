@@ -93,7 +93,6 @@ const server = createServer(async (request, response) => {
   const toolCaller = await capiClient.chat.completions.create({
     stream: false,
     model: "gpt-4",
-    // @ts-expect-error - TODO @gr2m - type incompatibility between @openai/api and @copilot-extensions/preview-sdk
     messages: toolCallMessages,
     tool_choice: "auto",
     tools: functions.map((f) => f.tool),
