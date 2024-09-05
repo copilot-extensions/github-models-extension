@@ -1,6 +1,6 @@
-import { createServer, IncomingMessage } from "node:http";
+import { createServer } from "node:http";
 
-import { verifyAndParseRequest, transformPayloadForOpenAICompatibility } from "@copilot-extensions/preview-sdk";
+import { verifyAndParseRequest, transformPayloadForOpenAICompatibility, getFunctionCalls, createDoneEvent } from "@copilot-extensions/preview-sdk";
 import OpenAI from "openai";
 
 import { describeModel } from "./functions/describe-model.js";
@@ -12,6 +12,7 @@ import { ModelsAPI } from "./models-api.js";
 
 const server = createServer(async (request, response) => {
   if (request.method === "GET") {
+    // health check
     response.statusCode = 200;
     response.end(`OK`);
     return;
@@ -54,7 +55,7 @@ const server = createServer(async (request, response) => {
   }
 
   // List of functions that are available to be called
-  const modelsAPI = new ModelsAPI(apiKey);
+  const modelsAPI = new ModelsAPI();
   const functions = [listModels, describeModel, executeModel, recommendModel];
 
   // Use the Copilot API to determine which function to execute
@@ -86,7 +87,7 @@ const server = createServer(async (request, response) => {
         "<-- END OF LIST OF MODELS -->",
       ].join("\n"),
     },
-     ...compatibilityPayload.messages,
+    ...compatibilityPayload.messages,
   ];
 
   console.time("tool-call");
@@ -94,16 +95,15 @@ const server = createServer(async (request, response) => {
     stream: false,
     model: "gpt-4o",
     messages: toolCallMessages,
-    tool_choice: "auto",
+    token: apiKey,
     tools: functions.map((f) => f.tool),
-  });
+  })
   console.timeEnd("tool-call");
 
+  const [functionToCall] = getFunctionCalls(promptResult)
+
   if (
-    !toolCaller.choices[0] ||
-    !toolCaller.choices[0].message ||
-    !toolCaller.choices[0].message.tool_calls ||
-    !toolCaller.choices[0].message.tool_calls[0].function
+    !functionToCall
   ) {
     console.log("No tool call found");
     // No tool to call, so just call the model with the original messages
@@ -111,26 +111,25 @@ const server = createServer(async (request, response) => {
       stream: true,
       model: "gpt-4o",
       messages: payload.messages,
-    });
+      token: apiKey,
+    })
 
     for await (const chunk of stream) {
-      const chunkStr = "data: " + JSON.stringify(chunk) + "\n\n";
-      response.write(chunkStr);
+      response.write(new TextDecoder().decode(chunk));
     }
-    response.write("data: [DONE]\n\n");
-    response.end();
+
+    response.end(createDoneEvent().toString());
     return;
   }
 
-  const functionToCall = toolCaller.choices[0].message.tool_calls[0].function;
-  const args = JSON.parse(functionToCall.arguments);
+  const args = JSON.parse(functionToCall.function.arguments);
 
   console.time("function-exec");
   let functionCallRes: RunnerResponse;
   try {
-    console.log("Executing function", functionToCall.name);
+    console.log("Executing function", functionToCall.function.name);
     const funcClass = functions.find(
-      (f) => f.definition.name === functionToCall.name
+      (f) => f.definition.name === functionToCall.function.name
     );
     if (!funcClass) {
       throw new Error("Unknown function");
@@ -148,23 +147,20 @@ const server = createServer(async (request, response) => {
   console.timeEnd("function-exec");
 
   try {
-    const stream = await modelsAPI.inference.chat.completions.create({
+    console.time("streaming");
+    const { stream } = await prompt.stream({
+      endpoint: 'https://models.inference.ai.azure.com/chat/completions',
       model: functionCallRes.model,
       messages: functionCallRes.messages,
-      stream: true,
-      stream_options: {
-        include_usage: false,
-      },
-    });
+      token: apiKey,
+    })
 
-    console.time("streaming");
     for await (const chunk of stream) {
-      const chunkStr = "data: " + JSON.stringify(chunk) + "\n\n";
-      response.write(chunkStr);
+      response.write(new TextDecoder().decode(chunk));
     }
-    response.write("data: [DONE]\n\n");
+
+    response.end(createDoneEvent().toString());
     console.timeEnd("streaming");
-    response.end();
   } catch (err) {
     console.error(err);
     response.statusCode = 500
@@ -176,12 +172,12 @@ const port = process.env.PORT || "3000"
 server.listen(port);
 console.log(`Server running at http://localhost:${port}`);
 
-function getBody(request: IncomingMessage): Promise<string> {
+function getBody(request: any): Promise<string> {
   return new Promise((resolve) => {
     const bodyParts: any[] = [];
     let body;
     request
-      .on("data", (chunk) => {
+      .on("data", (chunk: Buffer) => {
         bodyParts.push(chunk);
       })
       .on("end", () => {

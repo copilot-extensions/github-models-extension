@@ -1,5 +1,3 @@
-import OpenAI from "openai";
-
 // Model is the structure of a model in the model catalog.
 export interface Model {
   id: string;
@@ -33,15 +31,7 @@ export type ModelSchemaParameter = {
 };
 
 export class ModelsAPI {
-  inference: OpenAI;
   private _models: Model[] | null = null;
-
-  constructor(apiKey: string) {
-    this.inference = new OpenAI({
-      baseURL: "https://models.inference.ai.azure.com",
-      apiKey,
-    });
-  }
 
   async getModel(modelName: string): Promise<Model> {
     const modelRes = await fetch(

@@ -1,7 +1,8 @@
-import OpenAI from "openai";
+import type { InteropMessage } from "@copilot-extensions/preview-sdk";
+
 import { RunnerResponse, Tool } from "../functions.js";
 
-type MessageWithReferences = OpenAI.ChatCompletionMessageParam & {
+type MessageWithReferences = InteropMessage & {
   copilot_references: Reference[];
 };
 
