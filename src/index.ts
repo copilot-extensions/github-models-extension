@@ -12,7 +12,6 @@ import { ModelsAPI } from "./models-api.js";
 
 const server = createServer(async (request, response) => {
   if (request.method === "GET") {
-    // health check
     response.statusCode = 200;
     response.end(`OK`);
     return;
@@ -98,10 +97,13 @@ const server = createServer(async (request, response) => {
     stream: false,
     model: "gpt-4",
     tools: functions.map((f) => f.tool),
-  })
+  });
   console.timeEnd("tool-call");
 
-  const [functionToCall] = getFunctionCalls(toolCaller)
+  const [functionToCall] = getFunctionCalls(
+    // @ts-expect-error - type error due to Copilot/OpenAI SDKs interop, I'll look into it ~@gr2m
+    toolCaller.choices[0].message
+  )
 
   if (
     !functionToCall
@@ -139,7 +141,10 @@ const server = createServer(async (request, response) => {
 
     console.log("\t with args", args);
     const func = new funcClass(modelsAPI);
-    functionCallRes = await func.execute(payload.messages, args);
+    functionCallRes = await func.execute(
+      payload.messages,
+      args
+    );
   } catch (err) {
     console.error(err);
     response.statusCode = 500
