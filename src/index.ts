@@ -122,7 +122,7 @@ const server = createServer(async (request, response) => {
       response.write(chunkStr);
     }
 
-    response.end(createDoneEvent().toString());
+    response.end(createDoneEvent());
     return;
   }
 
@@ -169,7 +169,7 @@ const server = createServer(async (request, response) => {
       response.write(chunkStr);
     }
 
-    response.end(createDoneEvent().toString());
+    response.end(createDoneEvent());
     console.timeEnd("streaming");
   } catch (err) {
     console.error(err);
@@ -191,7 +191,7 @@ function getBody(request: IncomingMessage): Promise<string> {
         bodyParts.push(chunk);
       })
       .on("end", () => {
-        body = Buffer.concat(bodyParts).toString();
+        body = Buffer.concat(bodyParts);
         resolve(body);
       });
   });
