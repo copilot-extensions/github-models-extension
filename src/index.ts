@@ -102,7 +102,7 @@ const server = createServer(async (request, response) => {
 
   const [functionToCall] = getFunctionCalls(
     // @ts-expect-error - type error due to Copilot/OpenAI SDKs interop, I'll look into it ~@gr2m
-    toolCaller.choices[0].message
+    toolCaller.choices[0]
   )
 
   if (
@@ -191,8 +191,7 @@ function getBody(request: IncomingMessage): Promise<string> {
         bodyParts.push(chunk);
       })
       .on("end", () => {
-        body = Buffer.concat(bodyParts);
-        resolve(body);
+        resolve(Buffer.concat(bodyParts).toString());
       });
   });
 }
