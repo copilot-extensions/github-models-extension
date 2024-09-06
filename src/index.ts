@@ -1,4 +1,4 @@
-import { createServer } from "node:http";
+import { createServer, type IncomingMessage } from "node:http";
 
 import { verifyAndParseRequest, transformPayloadForOpenAICompatibility, getFunctionCalls, createDoneEvent } from "@copilot-extensions/preview-sdk";
 import OpenAI from "openai";
@@ -55,7 +55,7 @@ const server = createServer(async (request, response) => {
   }
 
   // List of functions that are available to be called
-  const modelsAPI = new ModelsAPI();
+  const modelsAPI = new ModelsAPI(apiKey);
   const functions = [listModels, describeModel, executeModel, recommendModel];
 
   // Use the Copilot API to determine which function to execute
@@ -95,12 +95,13 @@ const server = createServer(async (request, response) => {
     stream: false,
     model: "gpt-4o",
     messages: toolCallMessages,
-    token: apiKey,
+    stream: false,
+    model: "gpt-4",
     tools: functions.map((f) => f.tool),
   })
   console.timeEnd("tool-call");
 
-  const [functionToCall] = getFunctionCalls(promptResult)
+  const [functionToCall] = getFunctionCalls(toolCaller)
 
   if (
     !functionToCall
@@ -115,7 +116,8 @@ const server = createServer(async (request, response) => {
     })
 
     for await (const chunk of stream) {
-      response.write(new TextDecoder().decode(chunk));
+      const chunkStr = "data: " + JSON.stringify(chunk) + "\n\n";
+      response.write(chunkStr);
     }
 
     response.end(createDoneEvent().toString());
@@ -147,16 +149,19 @@ const server = createServer(async (request, response) => {
   console.timeEnd("function-exec");
 
   try {
-    console.time("streaming");
-    const { stream } = await prompt.stream({
-      endpoint: 'https://models.inference.ai.azure.com/chat/completions',
+    const stream = await modelsAPI.inference.chat.completions.create({
       model: functionCallRes.model,
       messages: functionCallRes.messages,
-      token: apiKey,
-    })
+      stream: true,
+      stream_options: {
+        include_usage: false,
+      },
+    });
 
+    console.time("streaming");
     for await (const chunk of stream) {
-      response.write(new TextDecoder().decode(chunk));
+      const chunkStr = "data: " + JSON.stringify(chunk) + "\n\n";
+      response.write(chunkStr);
     }
 
     response.end(createDoneEvent().toString());
@@ -172,9 +177,9 @@ const port = process.env.PORT || "3000"
 server.listen(port);
 console.log(`Server running at http://localhost:${port}`);
 
-function getBody(request: any): Promise<string> {
+function getBody(request: IncomingMessage): Promise<string> {
   return new Promise((resolve) => {
-    const bodyParts: any[] = [];
+    const bodyParts: Buffer[] = [];
     let body;
     request
       .on("data", (chunk: Buffer) => {

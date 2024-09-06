@@ -1,5 +1,4 @@
-import type { PromptFunction, InteropMessage } from "@copilot-extensions/preview-sdk";
-
+import OpenAI from "openai";
 import { ModelsAPI } from "./models-api.js";
 
 // defaultModel is the model used for internal calls - for tool calling,
@@ -9,18 +8,18 @@ export const defaultModel = "gpt-4o-mini";
 // RunnerResponse is the response from a function call.
 export interface RunnerResponse {
   model: string;
-  messages: InteropMessage[];
+  messages: OpenAI.ChatCompletionMessageParam[];
 }
 
 export abstract class Tool {
   modelsAPI: ModelsAPI;
-  static definition: PromptFunction["function"];
+  static definition: OpenAI.FunctionDefinition;
 
   constructor(modelsAPI: ModelsAPI) {
     this.modelsAPI = modelsAPI;
   }
 
-  static get tool(): PromptFunction {
+  static get tool(): OpenAI.Chat.Completions.ChatCompletionTool {
     return {
       type: "function",
       function: this.definition,
@@ -28,7 +27,7 @@ export abstract class Tool {
   }
 
   abstract execute(
-    messages: InteropMessage[],
-    args: Record<string, unknown>
+    messages: OpenAI.ChatCompletionMessageParam[],
+    args: object
   ): Promise<RunnerResponse>;
 }

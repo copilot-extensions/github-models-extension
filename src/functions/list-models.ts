@@ -1,5 +1,4 @@
-import type { InteropMessage } from "@copilot-extensions/preview-sdk";
-
+import OpenAI from "openai";
 import { RunnerResponse, defaultModel, Tool } from "../functions.js";
 
 export class listModels extends Tool {
@@ -16,7 +15,7 @@ export class listModels extends Tool {
   };
 
   async execute(
-    messages: InteropMessage[]
+    messages: OpenAI.ChatCompletionMessageParam[]
   ): Promise<RunnerResponse> {
     const models = await this.modelsAPI.listModels();
 
