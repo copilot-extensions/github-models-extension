@@ -1,6 +1,6 @@
 import { createServer, IncomingMessage } from "node:http";
 
-import { verifyAndParseRequest, createAckEvent } from "@copilot-extensions/preview-sdk";
+import { verifyAndParseRequest } from "@copilot-extensions/preview-sdk";
 import OpenAI from "openai";
 
 import { describeModel } from "./functions/describe-model.js";
@@ -50,8 +50,6 @@ const server = createServer(async (request, response) => {
     response.end()
     return;
   }
-
-  response.write(createAckEvent().toString());
 
   // List of functions that are available to be called
   const modelsAPI = new ModelsAPI(apiKey);
