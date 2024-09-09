@@ -90,7 +90,7 @@ const server = createServer(async (request, response) => {
   console.time("tool-call");
   const toolCaller = await capiClient.chat.completions.create({
     stream: false,
-    model: "gpt-4",
+    model: "gpt-4o",
     messages: toolCallMessages,
     tool_choice: "auto",
     tools: functions.map((f) => f.tool),
@@ -107,7 +107,7 @@ const server = createServer(async (request, response) => {
     // No tool to call, so just call the model with the original messages
     const stream = await capiClient.chat.completions.create({
       stream: true,
-      model: "gpt-4",
+      model: "gpt-4o",
       // @ts-expect-error - TODO @gr2m - type incompatibility between @openai/api and @copilot-extensions/preview-sdk
       messages: payload.messages,
     });
