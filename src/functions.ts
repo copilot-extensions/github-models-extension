@@ -3,7 +3,7 @@ import { ModelsAPI } from "./models-api.js";
 
 // defaultModel is the model used for internal calls - for tool calling,
 // or just for chat completions.
-export const defaultModel = "gpt-4o-mini";
+export const defaultModel = "gpt-4o";
 
 // RunnerResponse is the response from a function call.
 export interface RunnerResponse {
