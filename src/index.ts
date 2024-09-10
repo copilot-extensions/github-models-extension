@@ -112,7 +112,6 @@ const server = createServer(async (request, response) => {
       stream: true,
       model: "gpt-4o",
       messages: compatibilityPayload.messages,
-      token: apiKey,
     })
 
     for await (const chunk of stream) {
