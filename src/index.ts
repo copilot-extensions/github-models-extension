@@ -1,6 +1,6 @@
 import { createServer, IncomingMessage } from "node:http";
 
-import { verifyAndParseRequest } from "@copilot-extensions/preview-sdk";
+import { verifyAndParseRequest, transformPayloadForOpenAICompatibility } from "@copilot-extensions/preview-sdk";
 import OpenAI from "openai";
 
 import { describeModel } from "./functions/describe-model.js";
@@ -44,6 +44,8 @@ const server = createServer(async (request, response) => {
 
   console.log("Signature verified");
 
+  const compatibilityPayload = transformPayloadForOpenAICompatibility(payload);
+
   // Use the GitHub API token sent in the request
   if (!apiKey) {
     response.statusCode = 400
@@ -66,7 +68,7 @@ const server = createServer(async (request, response) => {
   const models = await modelsAPI.listModels();
   const toolCallMessages = [
     {
-      role: "system",
+      role: "system" as const,
       content: [
         "You are an extension of GitHub Copilot, built to interact with GitHub Models.",
         "GitHub Models is a language model playground, where you can experiment with different models and see how they respond to your prompts.",
@@ -84,8 +86,8 @@ const server = createServer(async (request, response) => {
         "<-- END OF LIST OF MODELS -->",
       ].join("\n"),
     },
-    ...payload.messages,
-  ].concat(payload.messages);
+     ...compatibilityPayload.messages,
+  ];
 
   console.time("tool-call");
   const toolCaller = await capiClient.chat.completions.create({
@@ -108,7 +110,6 @@ const server = createServer(async (request, response) => {
     const stream = await capiClient.chat.completions.create({
       stream: true,
       model: "gpt-4o",
-      // @ts-expect-error - TODO @gr2m - type incompatibility between @openai/api and @copilot-extensions/preview-sdk
       messages: payload.messages,
     });
 
@@ -137,7 +138,6 @@ const server = createServer(async (request, response) => {
 
     console.log("\t with args", args);
     const func = new funcClass(modelsAPI);
-    // @ts-expect-error - TODO @gr2m - type incompatibility between @openai/api and @copilot-extensions/preview-sdk
     functionCallRes = await func.execute(payload.messages, args);
   } catch (err) {
     console.error(err);
