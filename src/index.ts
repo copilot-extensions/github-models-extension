@@ -94,8 +94,6 @@ const server = createServer(async (request, response) => {
     stream: false,
     model: "gpt-4o",
     messages: toolCallMessages,
-    stream: false,
-    model: "gpt-4",
     tools: functions.map((f) => f.tool),
   });
   console.timeEnd("tool-call");
@@ -113,7 +111,7 @@ const server = createServer(async (request, response) => {
     const stream = await capiClient.chat.completions.create({
       stream: true,
       model: "gpt-4o",
-      messages: payload.messages,
+      messages: compatibilityPayload.messages,
       token: apiKey,
     })
 
@@ -142,7 +140,7 @@ const server = createServer(async (request, response) => {
     console.log("\t with args", args);
     const func = new funcClass(modelsAPI);
     functionCallRes = await func.execute(
-      payload.messages,
+      compatibilityPayload.messages,
       args
     );
   } catch (err) {
