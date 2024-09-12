@@ -1,0 +1,74 @@
+Here are some SDK examples for the OpenAI SDK for the gpt-4o model
+
+JavaScript:
+
+/*
+Run this model in Javascript
+
+> npm install openai
+*/
+import OpenAI from "openai";
+
+// To authenticate with the model you will need to generate a personal access token (PAT) in your GitHub settings. 
+// Create your PAT token by following instructions here: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens
+const token = process.env["GITHUB_TOKEN"];
+
+export async function main() {
+
+  const client = new OpenAI({
+    baseURL: "https://models.inference.ai.azure.com",
+    apiKey: token
+  });
+
+  const response = await client.chat.completions.create({
+    messages: [
+      { role:"system", content: "" },
+      { role:"user", content: "What is the capital of France?" }
+    ],
+    model: "gpt-4o",
+    temperature: 1,
+    max_tokens: 4096,
+    top_p: 1
+  });
+
+  console.log(response.choices[0].message.content);
+}
+
+main().catch((err) => {
+  console.error("The sample encountered an error:", err);
+});
+
+Python
+
+"""Run this model in Python
+
+> pip install openai
+"""
+import os
+from openai import OpenAI
+
+# To authenticate with the model you will need to generate a personal access token (PAT) in your GitHub settings. 
+# Create your PAT token by following instructions here: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens
+client = OpenAI(
+    base_url="https://models.inference.ai.azure.com",
+    api_key=os.environ["GITHUB_TOKEN"],
+)
+
+response = client.chat.completions.create(
+    messages=[
+        {
+            "role": "system",
+            "content": "",
+        },
+        {
+            "role": "user",
+            "content": "What is the capital of France?",
+        }
+    ],
+    model="gpt-4o",
+    temperature=1,
+    max_tokens=4096,
+    top_p=1
+)
+
+print(response.choices[0].message.content)
