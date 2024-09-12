@@ -1,11 +1,12 @@
 import { createServer, IncomingMessage } from "node:http";
 
-import { verifyAndParseRequest, transformPayloadForOpenAICompatibility } from "@copilot-extensions/preview-sdk";
+import { verifyAndParseRequest } from "@copilot-extensions/preview-sdk";
 import OpenAI from "openai";
 
 import { describeModel } from "./functions/describe-model.js";
 import { executeModel } from "./functions/execute-model.js";
 import { listModels } from "./functions/list-models.js";
+import { generateCode } from "./functions/generate-code.js";
 import { RunnerResponse } from "./functions.js";
 import { recommendModel } from "./functions/recommend-model.js";
 import { ModelsAPI } from "./models-api.js";
@@ -44,8 +45,6 @@ const server = createServer(async (request, response) => {
 
   console.log("Signature verified");
 
-  const compatibilityPayload = transformPayloadForOpenAICompatibility(payload);
-
   // Use the GitHub API token sent in the request
   if (!apiKey) {
     response.statusCode = 400
@@ -55,7 +54,7 @@ const server = createServer(async (request, response) => {
 
   // List of functions that are available to be called
   const modelsAPI = new ModelsAPI(apiKey);
-  const functions = [listModels, describeModel, executeModel, recommendModel];
+  const functions = [listModels, describeModel, executeModel, recommendModel, generateCode];
 
   // Use the Copilot API to determine which function to execute
   const capiClient = new OpenAI({
@@ -68,7 +67,7 @@ const server = createServer(async (request, response) => {
   const models = await modelsAPI.listModels();
   const toolCallMessages = [
     {
-      role: "system" as const,
+      role: "system",
       content: [
         "You are an extension of GitHub Copilot, built to interact with GitHub Models.",
         "GitHub Models is a language model playground, where you can experiment with different models and see how they respond to your prompts.",
@@ -86,8 +85,8 @@ const server = createServer(async (request, response) => {
         "<-- END OF LIST OF MODELS -->",
       ].join("\n"),
     },
-     ...compatibilityPayload.messages,
-  ];
+    ...payload.messages,
+  ].concat(payload.messages);
 
   console.time("tool-call");
   const toolCaller = await capiClient.chat.completions.create({
@@ -109,7 +108,8 @@ const server = createServer(async (request, response) => {
     // No tool to call, so just call the model with the original messages
     const stream = await capiClient.chat.completions.create({
       stream: true,
-      model: "gpt-4o",
+      model: "gpt-4",
+      // @ts-expect-error - TODO @gr2m - type incompatibility between @openai/api and @copilot-extensions/preview-sdk
       messages: payload.messages,
     });
 
@@ -138,6 +138,7 @@ const server = createServer(async (request, response) => {
 
     console.log("\t with args", args);
     const func = new funcClass(modelsAPI);
+    // @ts-expect-error - TODO @gr2m - type incompatibility between @openai/api and @copilot-extensions/preview-sdk
     functionCallRes = await func.execute(payload.messages, args);
   } catch (err) {
     console.error(err);
