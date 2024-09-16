@@ -56,8 +56,7 @@ Example Queries (IMPORTANT: Phrasing doesn't have to match):
     );
 
     const content = [
-      `The user has chosen to use the model named ${args.model}. Begin your response with the following phrase: "The model you've selected is ${args.model}".`,
-      "Do not include any additional information about the selected model in this first sentence - ONLY the name.",
+      `The user has chosen to use the model named ${args.model}.`,
     ];
 
     if (importantRefs.length > 0) {
