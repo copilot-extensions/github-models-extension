@@ -139,6 +139,7 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  // A tool has been called, so we need to execute the tool's function
   const functionToCall = toolCaller.choices[0].message.tool_calls[0].function;
   const args = JSON.parse(functionToCall.arguments);
 
@@ -164,8 +165,33 @@ const server = createServer(async (request, response) => {
   }
   console.timeEnd("function-exec");
 
+  // Now that we have a tool result, let's use it to call the model. Note that we're calling the model
+  // via the Models API, instead of the Copilot Chat API, so that if we're in the execute-model tool we
+  // can switch out the default model name for the requested model. We could change this in the future
+  // if we want to handle rate-limited users more gracefully or the model difference becomes a problem.
   try {
-    // We should keep all optional parameters out of this call, so it can work for any model.
+    if (functionToCall.name == executeModel.definition.name) {
+      // fetch the model data from the index (already in-memory) so we have all the information we need
+      // to build out the reference URLs
+      const modelData = await modelsAPI.getModelFromIndex(functionCallRes.model);
+      const sseData = {
+        type: "models.reference",
+        id: `models.reference.${modelData.name}`,
+        data: {
+          model: functionCallRes.model
+        },
+        is_implicit: false,
+        metadata: {
+          display_name: `Model: ${modelData.name}`,
+          display_icon: "icon",
+          display_url: `https://github.com/marketplace/models/${modelData.registryName}/${modelData.name}`, 
+        }
+      };
+      response.write(`event: copilot_references\ndata: ${JSON.stringify([sseData])}\n\n`);
+    }
+
+    // We should keep all optional parameters out of this call, so it can work for any model (in case we've
+    // just run the execute-model tool).
     const stream = await modelsAPI.inference.chat.completions.create({
       model: functionCallRes.model,
       messages: functionCallRes.messages,
