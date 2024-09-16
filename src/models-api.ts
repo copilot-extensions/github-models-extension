@@ -4,7 +4,7 @@ import OpenAI from "openai";
 export interface Model {
   name: string;
   displayName: string;
-  version: number;
+  version: string;
   publisher: string;
   registryName: string;
   license: string;
