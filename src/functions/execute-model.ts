@@ -30,6 +30,7 @@ Example Queries (IMPORTANT: Phrasing doesn't have to match):
             "The name of the model to execute. It is ONLY the name of the model, not the publisher or registry.",
             "For example: `gpt-4o`, or `cohere-command-r-plus`.",
             "The list of models is available in the context window of the chat, in the `<-- LIST OF MODELS -->` section.",
+            "If the model name is not found in the list of models, pick the closest matching model from the list.",
           ].join("\n"),
         },
         instruction: {

@@ -10,8 +10,11 @@ export class describeModel extends Tool {
       properties: {
         model: {
           type: "string",
-          description:
-            'The model to describe. Looks like "registry/model-name". For example, `azureml/Phi-3-medium-128k-instruct` or `azure-openai/gpt-4o',
+          description: [
+            'The model to describe. Looks like "model-name". For example, `Phi-3-medium-128k-instruct` or `gpt-4o`.',
+            'The list of models is available in the context window of the chat, in the `<-- LIST OF MODELS -->` section.',
+            'If the model name is not found in the list of models, pick the closest matching model from the list.',
+          ].join("\n"),
         },
       },
       required: ["model"],
@@ -30,12 +33,11 @@ export class describeModel extends Tool {
     const systemMessage = [
       "The user is asking about the AI model with the following details:",
       `\tModel Name: ${model.name}`,
-      `\tModel Version: ${model.model_version}`,
+      `\tModel Version: ${model.version}`,
       `\tPublisher: ${model.publisher}`,
-      `\tModel Family: ${model.model_family}`,
-      `\tModel Registry: ${model.model_registry}`,
+      `\tModel Registry: ${model.registryName}`,
       `\tLicense: ${model.license}`,
-      `\tTask: ${model.task}`,
+      `\tTask: ${model.inferenceTasks.join(", ")}`,
       `\tDescription: ${model.description}`,
       `\tSummary: ${model.summary}`,
       "\n",
