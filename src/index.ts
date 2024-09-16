@@ -55,6 +55,7 @@ const server = createServer(async (request, response) => {
 
   // List of functions that are available to be called
   const modelsAPI = new ModelsAPI(apiKey);
+
   const functions = [listModels, describeModel, executeModel, recommendModel];
 
   // Use the Copilot API to determine which function to execute
@@ -66,6 +67,7 @@ const server = createServer(async (request, response) => {
   // Prepend a system message that includes the list of models, so that
   // tool calls can better select the right model to use.
   const models = await modelsAPI.listModels();
+
   const toolCallMessages = [
     {
       role: "system" as const,
@@ -75,13 +77,28 @@ const server = createServer(async (request, response) => {
         "Here is a list of some of the models available to the user:",
         "<-- LIST OF MODELS -->",
         JSON.stringify(
-          models.map((model) => ({
-            friendly_name: model.friendly_name,
+          [...models.map((model) => ({
+            friendly_name: model.displayName,
             name: model.name,
             publisher: model.publisher,
-            registry: model.model_registry,
+            registry: model.registryName,
             description: model.summary,
-          }))
+          })),
+          {
+            friendly_name: "OpenAI o1-mini",
+            name: "o1-mini",
+            publisher: "openai",
+            model_registry: "azure-openai",
+            description: "Smaller, faster, and 80% cheaper than o1-preview, performs well at code generation and small context operations."
+          },
+          {
+            friendly_name: "OpenAI o1-preview",
+            name: "o1-preview",
+            publisher: "openai",
+            model_registry: "azure-openai",
+            description: "Focused on advanced reasoning and solving complex problems, including math and science tasks. Ideal for applications that require deep contextual understanding and agentic workflows."
+          },
+        ]
         ),
         "<-- END OF LIST OF MODELS -->",
       ].join("\n"),
@@ -148,13 +165,11 @@ const server = createServer(async (request, response) => {
   console.timeEnd("function-exec");
 
   try {
+    // We should keep all optional parameters out of this call, so it can work for any model.
     const stream = await modelsAPI.inference.chat.completions.create({
       model: functionCallRes.model,
       messages: functionCallRes.messages,
       stream: true,
-      stream_options: {
-        include_usage: false,
-      },
     });
 
     console.time("streaming");
