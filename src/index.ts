@@ -1,6 +1,6 @@
 import { createServer, IncomingMessage } from "node:http";
 
-import { verifyAndParseRequest, transformPayloadForOpenAICompatibility } from "@copilot-extensions/preview-sdk";
+import { verifyAndParseRequest, transformPayloadForOpenAICompatibility, createReferencesEvent } from "@copilot-extensions/preview-sdk";
 import OpenAI from "openai";
 
 import { describeModel } from "./functions/describe-model.js";
@@ -170,7 +170,7 @@ const server = createServer(async (request, response) => {
   // can switch out the default model name for the requested model. We could change this in the future
   // if we want to handle rate-limited users more gracefully or the model difference becomes a problem.
   try {
-    if (functionToCall.name == executeModel.definition.name) {
+    if (functionToCall.name === executeModel.definition.name) {
       // fetch the model data from the index (already in-memory) so we have all the information we need
       // to build out the reference URLs
       const modelData = await modelsAPI.getModelFromIndex(functionCallRes.model);
@@ -187,7 +187,8 @@ const server = createServer(async (request, response) => {
           display_url: `https://github.com/marketplace/models/${modelData.registryName}/${modelData.name}`, 
         }
       };
-      response.write(`event: copilot_references\ndata: ${JSON.stringify([sseData])}\n\n`);
+      const event = createReferencesEvent([sseData]);
+      response.write(event);
     }
 
     // We should keep all optional parameters out of this call, so it can work for any model (in case we've
