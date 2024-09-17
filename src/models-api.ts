@@ -45,7 +45,7 @@ export class ModelsAPI {
     const modelFromIndex = await this.getModelFromIndex(modelName);
 
     const modelRes = await fetch(
-      `https://eastus.api.azureml.ms/asset-gallery/v1.0/${modelFromIndex.registryName}/models/${modelFromIndex.name}/version/${modelFromIndex.version}`,
+      `https://api.catalog.azureml.ms/asset-gallery/v1.0/${modelFromIndex.registryName}/models/${modelFromIndex.name}/version/${modelFromIndex.version}`,
     );
     if (!modelRes.ok) {
       throw new Error(`Failed to fetch ${modelName} details from the model catalog.`);
@@ -75,7 +75,7 @@ export class ModelsAPI {
     }
 
     const modelsRes = await fetch(
-      "https://eastus.api.azureml.ms/asset-gallery/v1.0/models",
+      "https://api.catalog.azureml.ms/asset-gallery/v1.0/models",
       {
         method: "POST",
         headers: {
