@@ -2,12 +2,8 @@
 
 This is a [GitHub Copilot Extension](https://docs.github.com/en/copilot/using-github-copilot/using-extensions-to-integrate-external-tools-with-copilot-chat) that provides a way to interact with [GitHub Models](https://github.blog/news-insights/product-news/introducing-github-models/), directly in Copilot Chat.
 
-> [!NOTE]
-> To use Copilot Extensions, you must be enrolled in the limited public beta.
-> 
-> All enrolled users with a GitHub Copilot Individual subscription can use Copilot Extensions.
-> 
-> For enrolled organizations or enterprises with a Copilot Business or Copilot Enterprise subscription, organization owners and enterprise administrators can grant access to Copilot Extensions.
+>[!NOTE]
+> Copilot Extensions are in public beta and GitHub Models are in limited public beta. They may be subject to change. To request access to GitHub Models, [join the waitlist](https://github.com/marketplace/models/waitlist).
 
 ## What it can do
 
