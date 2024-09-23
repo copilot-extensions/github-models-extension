@@ -190,16 +190,8 @@ const server = createServer(async (request, response) => {
       const event = createReferencesEvent([sseData]);
       response.write(event);
 
-      // We should keep all optional parameters out of this call, so it can work for any model (in case we've
-      // just run the execute-model tool).
-      if (!["o1-mini", "o1-preview"].includes(args.model)) {
-        stream = await modelsAPI.inference.chat.completions.create({
-          model: functionCallRes.model,
-          messages: functionCallRes.messages,
-          stream: true
-        });
-      } else {
-        // for non-streaming models, we need to still stream the response back
+      if (["o1-mini", "o1-preview"].includes(args.model)) {
+        // for non-streaming models, we need to still stream the response back, so we build the stream ourselves
         stream = (async function*() {
           const result = await modelsAPI.inference.chat.completions.create({
             model: functionCallRes.model,
@@ -207,6 +199,12 @@ const server = createServer(async (request, response) => {
           });
           yield result;
         })();
+      } else {
+        stream = await modelsAPI.inference.chat.completions.create({
+          model: functionCallRes.model,
+          messages: functionCallRes.messages,
+          stream: true
+        });
       }
     } else {
       stream = await capiClient.chat.completions.create({
