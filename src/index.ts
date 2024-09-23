@@ -165,13 +165,13 @@ const server = createServer(async (request, response) => {
   }
   console.timeEnd("function-exec");
 
-  // Now that we have a tool result, let's use it to call the model. Note that we're calling the model
-  // via the Models API, instead of the Copilot Chat API, so that if we're in the execute-model tool we
-  // can switch out the default model name for the requested model. We could change this in the future
-  // if we want to handle rate-limited users more gracefully or the model difference becomes a problem.
+  // Now that we have a tool result, let's use it to call the model.
   try {
+    let stream: AsyncIterable<any>;
+
     if (functionToCall.name === executeModel.definition.name) {
-      // fetch the model data from the index (already in-memory) so we have all the information we need
+      // First, let's write a reference with the model we're executing.
+      // Fetch the model data from the index (already in-memory) so we have all the information we need
       // to build out the reference URLs
       const modelData = await modelsAPI.getModelFromIndex(functionCallRes.model);
       const sseData = {
@@ -189,15 +189,30 @@ const server = createServer(async (request, response) => {
       };
       const event = createReferencesEvent([sseData]);
       response.write(event);
-    }
 
-    // We should keep all optional parameters out of this call, so it can work for any model (in case we've
-    // just run the execute-model tool).
-    const stream = await modelsAPI.inference.chat.completions.create({
-      model: functionCallRes.model,
-      messages: functionCallRes.messages,
-      stream: true,
-    });
+      if (["o1-mini", "o1-preview"].includes(args.model)) {
+        // for non-streaming models, we need to still stream the response back, so we build the stream ourselves
+        stream = (async function*() {
+          const result = await modelsAPI.inference.chat.completions.create({
+            model: functionCallRes.model,
+            messages: functionCallRes.messages
+          });
+          yield result;
+        })();
+      } else {
+        stream = await modelsAPI.inference.chat.completions.create({
+          model: functionCallRes.model,
+          messages: functionCallRes.messages,
+          stream: true
+        });
+      }
+    } else {
+      stream = await capiClient.chat.completions.create({
+        stream: true,
+        model: "gpt-4o",
+        messages: functionCallRes.messages,
+      });
+    }
 
     console.time("streaming");
     for await (const chunk of stream) {

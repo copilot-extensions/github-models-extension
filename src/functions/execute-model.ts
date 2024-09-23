@@ -70,7 +70,7 @@ Example Queries (IMPORTANT: Phrasing doesn't have to match):
       model: args.model,
       messages: [
         {
-          role: "system",
+          role: ["o1-mini", "o1-preview"].includes(args.model) ? "assistant" : "system",
           content: content.join("\n"),
         },
         { role: "user", content: args.instruction },
