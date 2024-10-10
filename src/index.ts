@@ -225,6 +225,7 @@ const server = createServer(async (request, response) => {
   } catch (err) {
     console.error(err);
     response.statusCode = 500
+    response.write("data: Something went wrong\n\n")
     response.end()
   }
 });
