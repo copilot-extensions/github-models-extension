@@ -224,6 +224,11 @@ const server = createServer(async (request, response) => {
     response.end();
   } catch (err) {
     console.error(err);
+
+    if ((err as any).response && (err as any).response.status === 400) {
+      console.error('Error 400:', (err as any).response.data);
+    }
+    
     response.statusCode = 500
     response.write("data: Something went wrong\n\n")
     response.end()
