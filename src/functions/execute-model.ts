@@ -51,9 +51,10 @@ Example Queries (IMPORTANT: Phrasing doesn't have to match):
   ): Promise<RunnerResponse> {
     // Check if the user included any code references in their last message
     const lastMessage = messages[messages.length - 1];
-    const importantRefs = lastMessage.copilot_references.filter(
-      (ref) => ref.type === "client.selection" || ref.type === "client.file"
-    );
+    let importantRefs: Reference[] = [];
+    if (lastMessage.copilot_references) {
+        importantRefs = lastMessage.copilot_references.filter((ref) => ref.type === "client.selection" || ref.type === "client.file");
+    }
 
     const content = [
       `The user has chosen to use the model named ${args.model}.`,
