@@ -2,9 +2,6 @@
 
 This is an agent-based [GitHub Copilot Extension](https://docs.github.com/en/copilot/using-github-copilot/using-extensions-to-integrate-external-tools-with-copilot-chat) that provides a way to interact with [GitHub Models](https://github.blog/news-insights/product-news/introducing-github-models/), directly in Copilot Chat.
 
->[!NOTE]
-> Copilot Extensions are in public preview and GitHub Models are in limited public preview. They may be subject to change.
-
 ## What it can do
 
 You can ask it things like "what models are available?" or "which model should I use for my use-case?". You can also ask it to execute a basic prompt using a particular model.
