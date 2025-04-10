@@ -1,6 +1,6 @@
 import { createServer, type IncomingMessage } from "node:http";
 
-import { verifyAndParseRequest, transformPayloadForOpenAICompatibility, getFunctionCalls, createDoneEvent } from "@copilot-extensions/preview-sdk";
+import { verifyAndParseRequest, transformPayloadForOpenAICompatibility, getFunctionCalls, createDoneEvent, createReferencesEvent } from "@copilot-extensions/preview-sdk";
 import OpenAI from "openai";
 
 import { describeModel } from "./functions/describe-model.js";
@@ -55,6 +55,7 @@ const server = createServer(async (request, response) => {
 
   // List of functions that are available to be called
   const modelsAPI = new ModelsAPI(apiKey);
+
   const functions = [listModels, describeModel, executeModel, recommendModel];
 
   // Use the Copilot API to determine which function to execute
@@ -66,6 +67,7 @@ const server = createServer(async (request, response) => {
   // Prepend a system message that includes the list of models, so that
   // tool calls can better select the right model to use.
   const models = await modelsAPI.listModels();
+
   const toolCallMessages = [
     {
       role: "system" as const,
@@ -75,13 +77,28 @@ const server = createServer(async (request, response) => {
         "Here is a list of some of the models available to the user:",
         "<-- LIST OF MODELS -->",
         JSON.stringify(
-          models.map((model) => ({
-            friendly_name: model.friendly_name,
+          [...models.map((model) => ({
+            friendly_name: model.displayName,
             name: model.name,
             publisher: model.publisher,
-            registry: model.model_registry,
+            registry: model.registryName,
             description: model.summary,
-          }))
+          })),
+          {
+            friendly_name: "OpenAI o1-mini",
+            name: "o1-mini",
+            publisher: "openai",
+            model_registry: "azure-openai",
+            description: "Smaller, faster, and 80% cheaper than o1-preview, performs well at code generation and small context operations."
+          },
+          {
+            friendly_name: "OpenAI o1-preview",
+            name: "o1-preview",
+            publisher: "openai",
+            model_registry: "azure-openai",
+            description: "Focused on advanced reasoning and solving complex problems, including math and science tasks. Ideal for applications that require deep contextual understanding and agentic workflows."
+          },
+        ]
         ),
         "<-- END OF LIST OF MODELS -->",
       ].join("\n"),
@@ -150,15 +167,54 @@ const server = createServer(async (request, response) => {
   }
   console.timeEnd("function-exec");
 
+  // Now that we have a tool result, let's use it to call the model.
   try {
-    const stream = await modelsAPI.inference.chat.completions.create({
-      model: functionCallRes.model,
-      messages: functionCallRes.messages,
-      stream: true,
-      stream_options: {
-        include_usage: false,
-      },
-    });
+    let stream: AsyncIterable<any>;
+
+    if (functionToCall.function.name === executeModel.definition.name) {
+      // First, let's write a reference with the model we're executing.
+      // Fetch the model data from the index (already in-memory) so we have all the information we need
+      // to build out the reference URLs
+      const modelData = await modelsAPI.getModelFromIndex(functionCallRes.model);
+      const sseData = {
+        type: "models.reference",
+        id: `models.reference.${modelData.name}`,
+        data: {
+          model: functionCallRes.model
+        },
+        is_implicit: false,
+        metadata: {
+          display_name: `Model: ${modelData.name}`,
+          display_icon: "icon",
+          display_url: `https://github.com/marketplace/models/${modelData.registryName}/${modelData.name}`,
+        }
+      };
+      const event = createReferencesEvent([sseData]);
+      response.write(event);
+
+      if (["o1-mini", "o1-preview"].includes(args.model)) {
+        // for non-streaming models, we need to still stream the response back, so we build the stream ourselves
+        stream = (async function*() {
+          const result = await modelsAPI.inference.chat.completions.create({
+            model: functionCallRes.model,
+            messages: functionCallRes.messages
+          });
+          yield result;
+        })();
+      } else {
+        stream = await modelsAPI.inference.chat.completions.create({
+          model: functionCallRes.model,
+          messages: functionCallRes.messages,
+          stream: true
+        });
+      }
+    } else {
+      stream = await capiClient.chat.completions.create({
+        stream: true,
+        model: "gpt-4o",
+        messages: functionCallRes.messages,
+      });
+    }
 
     console.time("streaming");
     for await (const chunk of stream) {
@@ -170,7 +226,13 @@ const server = createServer(async (request, response) => {
     console.timeEnd("streaming");
   } catch (err) {
     console.error(err);
+
+    if ((err as any).response && (err as any).response.status === 400) {
+      console.error('Error 400:', (err as any).response.data);
+    }
+
     response.statusCode = 500
+    response.write("data: Something went wrong\n\n")
     response.end()
   }
 });

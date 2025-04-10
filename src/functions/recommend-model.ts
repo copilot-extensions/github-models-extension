@@ -32,12 +32,11 @@ export class recommendModel extends Tool {
       systemMessage.push(
         [
           `\t- Model Name: ${model.name}`,
-          `\t\tModel Version: ${model.model_version}`,
+          `\t\tModel Version: ${model.version}`,
           `\t\tPublisher: ${model.publisher}`,
-          `\t\tModel Family: ${model.model_family}`,
-          `\t\tModel Registry: ${model.model_registry}`,
+          `\t\tModel Registry: ${model.registryName}`,
           `\t\tLicense: ${model.license}`,
-          `\t\tTask: ${model.task}`,
+          `\t\tTask: ${model.inferenceTasks.join(", ")}`,
           `\t\tSummary: ${model.summary}`,
         ].join("\n")
       );

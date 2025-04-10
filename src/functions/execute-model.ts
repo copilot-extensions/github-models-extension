@@ -30,6 +30,7 @@ Example Queries (IMPORTANT: Phrasing doesn't have to match):
             "The name of the model to execute. It is ONLY the name of the model, not the publisher or registry.",
             "For example: `gpt-4o`, or `cohere-command-r-plus`.",
             "The list of models is available in the context window of the chat, in the `<-- LIST OF MODELS -->` section.",
+            "If the model name is not found in the list of models, pick the closest matching model from the list.",
           ].join("\n"),
         },
         instruction: {
@@ -50,13 +51,13 @@ Example Queries (IMPORTANT: Phrasing doesn't have to match):
   ): Promise<RunnerResponse> {
     // Check if the user included any code references in their last message
     const lastMessage = messages[messages.length - 1];
-    const importantRefs = lastMessage.copilot_references.filter(
-      (ref) => ref.type === "client.selection" || ref.type === "client.file"
-    );
+    let importantRefs: Reference[] = [];
+    if (lastMessage.copilot_references) {
+        importantRefs = lastMessage.copilot_references.filter((ref) => ref.type === "client.selection" || ref.type === "client.file");
+    }
 
     const content = [
-      `The user has chosen to use the model named ${args.model}. Begin your response with the following phrase: "The model you've selected is ${args.model}".`,
-      "Do not include any additional information about the selected model in this first sentence - ONLY the name.",
+      `The user has chosen to use the model named ${args.model}.`,
     ];
 
     if (importantRefs.length > 0) {
@@ -70,7 +71,7 @@ Example Queries (IMPORTANT: Phrasing doesn't have to match):
       model: args.model,
       messages: [
         {
-          role: "system",
+          role: ["o1-mini", "o1-preview"].includes(args.model) ? "assistant" : "system",
           content: content.join("\n"),
         },
         { role: "user", content: args.instruction },

@@ -27,7 +27,7 @@ export class listModels extends Tool {
       "That list of models is as follows:",
       JSON.stringify(
         models.map((model) => ({
-          name: model.friendly_name,
+          name: model.displayName,
           publisher: model.publisher,
           description: model.summary,
         }))
