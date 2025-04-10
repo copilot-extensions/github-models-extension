@@ -12,7 +12,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@copilot-extensions/preview-sdk": "^4.0.2",
+    "@copilot-extensions/preview-sdk": "^5.0.1",
     "express": "^4.19.2",
     "openai": "^4.55.0"
   },
