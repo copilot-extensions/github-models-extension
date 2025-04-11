@@ -22,8 +22,8 @@ const server = createServer(async (request, response) => {
   let verifyAndParseRequestResult: Awaited<ReturnType<typeof verifyAndParseRequest>>;
   const apiKey = request.headers["x-github-token"] as string;
   try {
-    const signature = request.headers["github-public-key-signature"] as string;
-    const keyID = request.headers["github-public-key-identifier"] as string;
+    const signature = request.headers["x-github-public-key-signature"] as string;
+    const keyID = request.headers["x-github-public-key-identifier"] as string;
     verifyAndParseRequestResult = await verifyAndParseRequest(body, signature, keyID, {
       token: apiKey,
     });
