@@ -1,6 +1,6 @@
-import { createServer, IncomingMessage } from "node:http";
+import { createServer, type IncomingMessage } from "node:http";
 
-import { verifyAndParseRequest, transformPayloadForOpenAICompatibility, createReferencesEvent } from "@copilot-extensions/preview-sdk";
+import { verifyAndParseRequest, transformPayloadForOpenAICompatibility, getFunctionCalls, createDoneEvent, createReferencesEvent } from "@copilot-extensions/preview-sdk";
 import OpenAI from "openai";
 
 import { describeModel } from "./functions/describe-model.js";
@@ -103,7 +103,7 @@ const server = createServer(async (request, response) => {
         "<-- END OF LIST OF MODELS -->",
       ].join("\n"),
     },
-     ...compatibilityPayload.messages,
+    ...compatibilityPayload.messages,
   ];
 
   console.time("tool-call");
@@ -111,44 +111,43 @@ const server = createServer(async (request, response) => {
     stream: false,
     model: "gpt-4o",
     messages: toolCallMessages,
-    tool_choice: "auto",
     tools: functions.map((f) => f.tool),
   });
   console.timeEnd("tool-call");
 
+  const [functionToCall] = getFunctionCalls(
+    // @ts-expect-error - type error due to Copilot/OpenAI SDKs interop, I'll look into it ~@gr2m
+    toolCaller.choices[0]
+  )
+
   if (
-    !toolCaller.choices[0] ||
-    !toolCaller.choices[0].message ||
-    !toolCaller.choices[0].message.tool_calls ||
-    !toolCaller.choices[0].message.tool_calls[0].function
+    !functionToCall
   ) {
     console.log("No tool call found");
     // No tool to call, so just call the model with the original messages
     const stream = await capiClient.chat.completions.create({
       stream: true,
       model: "gpt-4o",
-      messages: payload.messages,
-    });
+      messages: compatibilityPayload.messages,
+    })
 
     for await (const chunk of stream) {
       const chunkStr = "data: " + JSON.stringify(chunk) + "\n\n";
       response.write(chunkStr);
     }
-    response.write("data: [DONE]\n\n");
-    response.end();
+
+    response.end(createDoneEvent());
     return;
   }
 
-  // A tool has been called, so we need to execute the tool's function
-  const functionToCall = toolCaller.choices[0].message.tool_calls[0].function;
-  const args = JSON.parse(functionToCall.arguments);
+  const args = JSON.parse(functionToCall.function.arguments);
 
   console.time("function-exec");
   let functionCallRes: RunnerResponse;
   try {
-    console.log("Executing function", functionToCall.name);
+    console.log("Executing function", functionToCall.function.name);
     const funcClass = functions.find(
-      (f) => f.definition.name === functionToCall.name
+      (f) => f.definition.name === functionToCall.function.name
     );
     if (!funcClass) {
       throw new Error("Unknown function");
@@ -156,7 +155,10 @@ const server = createServer(async (request, response) => {
 
     console.log("\t with args", args);
     const func = new funcClass(modelsAPI);
-    functionCallRes = await func.execute(payload.messages, args);
+    functionCallRes = await func.execute(
+      compatibilityPayload.messages,
+      args
+    );
   } catch (err) {
     console.error(err);
     response.statusCode = 500
@@ -169,7 +171,7 @@ const server = createServer(async (request, response) => {
   try {
     let stream: AsyncIterable<any>;
 
-    if (functionToCall.name === executeModel.definition.name) {
+    if (functionToCall.function.name === executeModel.definition.name) {
       // First, let's write a reference with the model we're executing.
       // Fetch the model data from the index (already in-memory) so we have all the information we need
       // to build out the reference URLs
@@ -184,7 +186,7 @@ const server = createServer(async (request, response) => {
         metadata: {
           display_name: `Model: ${modelData.name}`,
           display_icon: "icon",
-          display_url: `https://github.com/marketplace/models/${modelData.registryName}/${modelData.name}`, 
+          display_url: `https://github.com/marketplace/models/${modelData.registryName}/${modelData.name}`,
         }
       };
       const event = createReferencesEvent([sseData]);
@@ -219,16 +221,16 @@ const server = createServer(async (request, response) => {
       const chunkStr = "data: " + JSON.stringify(chunk) + "\n\n";
       response.write(chunkStr);
     }
-    response.write("data: [DONE]\n\n");
+
+    response.end(createDoneEvent());
     console.timeEnd("streaming");
-    response.end();
   } catch (err) {
     console.error(err);
 
     if ((err as any).response && (err as any).response.status === 400) {
       console.error('Error 400:', (err as any).response.data);
     }
-    
+
     response.statusCode = 500
     response.write("data: Something went wrong\n\n")
     response.end()
@@ -241,15 +243,14 @@ console.log(`Server running at http://localhost:${port}`);
 
 function getBody(request: IncomingMessage): Promise<string> {
   return new Promise((resolve) => {
-    const bodyParts: any[] = [];
+    const bodyParts: Buffer[] = [];
     let body;
     request
-      .on("data", (chunk) => {
+      .on("data", (chunk: Buffer) => {
         bodyParts.push(chunk);
       })
       .on("end", () => {
-        body = Buffer.concat(bodyParts).toString();
-        resolve(body);
+        resolve(Buffer.concat(bodyParts).toString());
       });
   });
 }

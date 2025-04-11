@@ -13,7 +13,6 @@
   "description": "",
   "dependencies": {
     "@copilot-extensions/preview-sdk": "^5.0.1",
-    "express": "^4.21.2",
     "openai": "^4.55.0"
   },
   "devDependencies": {
